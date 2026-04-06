@@ -1,2 +1,4 @@
 target/
 *.pdb
+windows/target-trace/
+windows/target2/

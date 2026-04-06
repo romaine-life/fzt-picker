@@ -148,12 +148,20 @@ pub fn walk_yaml(
 
     let mut args: Vec<String> = Vec::new();
     args.push("-n".to_string());
-    args.push("10000".to_string());
+    args.push("50000".to_string());
 
     if folders_only {
         args.push("/ad".to_string());
     } else {
         args.push("/a-d".to_string());
+    }
+
+    // Exclude directories that consume the result limit
+    let exclusions = "!.git\\ !$Recycle.Bin\\ !node_modules\\";
+    if search_terms.is_empty() {
+        search_terms = exclusions.to_string();
+    } else {
+        search_terms = format!("{} {}", search_terms, exclusions);
     }
 
     crate::log(&format!("picker: querying Everything: es {} {}", args.join(" "), search_terms));
@@ -211,7 +219,7 @@ pub fn walk_yaml(
         }
 
         if folders_only {
-            root.insert_dir(&parts);
+            root.insert_file(&parts, path_str);
         } else {
             root.insert_file(&parts, path_str);
         }

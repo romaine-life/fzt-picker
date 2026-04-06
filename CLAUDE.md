@@ -78,3 +78,13 @@ The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each 
 - **Multi-select**: `GetResults()` only returns the first selected item
 - **Excluded processes**: No process exclusion list — the hook loads into every GUI process including system processes
 - **No configuration**: fzt path, Everything path, and behavior are hardcoded
+- **Folder-only mode shows blank tree**: `insert_dir` creates tree structure but no selectable leaf items, so `has_content()` returns false and the YAML is empty. Fixed in 2026-04-06 session but superseded by the fzt-core lazy loading redesign (see nelsong6/fzt-picker#1)
+- **Everything result limit**: 10,000 results (now 50,000) is insufficient — `.git/objects`, `$Recycle.Bin`, and `node_modules` directories consume the limit before useful results appear. Exclusions added but the real fix is the fzt-core `DirProvider` approach (lazy directory loading, no Everything dependency)
+
+### 2026-04-06: Bug fixes + architecture redesign planned
+
+- **Fixed folder-only mode blank display** — `walker.rs:214`: changed `root.insert_dir(&parts)` to `root.insert_file(&parts, path_str)` so directories become selectable leaf items with full paths as descriptions
+- **Added Everything exclusions** — `.git`, `$Recycle.Bin`, `node_modules` excluded from Everything queries to reduce noise
+- **Bumped result limit** — 10,000 → 50,000 (still insufficient for folder-only mode across all drives)
+- **Created GitHub repo** — `nelsong6/fzt-picker` with remote on GitHub, was previously local-only
+- **Architecture redesign filed** — nelsong6/fzt-picker#1: replace Everything-backed YAML tree with fzt-core's `DirProvider` (lazy filesystem loading). Initial tree shows drive roots only, pre-expanded along the calling app's focused_dir path. Each scope push reads one directory. No more result limit problem.
