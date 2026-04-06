@@ -39,7 +39,7 @@ fn alloc_pwstr(s: &str) -> Result<PWSTR> {
     }
 }
 
-#[implement(IFileOpenDialog, IFileDialog, IModalWindow)]
+#[implement(IFileOpenDialog, IFileDialog, IFileDialog2, IModalWindow)]
 pub struct FileOpenDialogProxy {
     state: Mutex<DialogState>,
 }
@@ -99,6 +99,7 @@ impl IModalWindow_Impl for FileOpenDialogProxy_Impl {
 
 impl IFileDialog_Impl for FileOpenDialogProxy_Impl {
     fn SetFileTypes(&self, cfiletypes: u32, rgfilterspec: *const COMDLG_FILTERSPEC) -> Result<()> {
+        crate::log("picker: -> SetFileTypes");
         let mut state = self.state.lock().unwrap();
         state.file_types = unsafe {
             std::slice::from_raw_parts(rgfilterspec, cfiletypes as usize)
@@ -114,32 +115,39 @@ impl IFileDialog_Impl for FileOpenDialogProxy_Impl {
     }
 
     fn SetFileTypeIndex(&self, ifiletype: u32) -> Result<()> {
+        crate::log("picker: -> SetFileTypeIndex");
         self.state.lock().unwrap().file_type_index = ifiletype;
         Ok(())
     }
 
     fn GetFileTypeIndex(&self) -> Result<u32> {
+        crate::log("picker: -> GetFileTypeIndex");
         Ok(self.state.lock().unwrap().file_type_index)
     }
 
     fn Advise(&self, _pfde: Option<&IFileDialogEvents>) -> Result<u32> {
+        crate::log("picker: -> Advise");
         Ok(0)
     }
 
     fn Unadvise(&self, _dwcookie: u32) -> Result<()> {
+        crate::log("picker: -> Unadvise");
         Ok(())
     }
 
     fn SetOptions(&self, fos: FILEOPENDIALOGOPTIONS) -> Result<()> {
+        crate::log(&format!("picker: -> SetOptions(0x{:X})", fos.0));
         self.state.lock().unwrap().options = fos.0;
         Ok(())
     }
 
     fn GetOptions(&self) -> Result<FILEOPENDIALOGOPTIONS> {
+        crate::log("picker: -> GetOptions");
         Ok(FILEOPENDIALOGOPTIONS(self.state.lock().unwrap().options))
     }
 
     fn SetDefaultFolder(&self, psi: Option<&IShellItem>) -> Result<()> {
+        crate::log("picker: -> SetDefaultFolder");
         if let Some(si) = psi {
             if let Some(path) = shell_item_to_path(si) {
                 self.state.lock().unwrap().default_folder = Some(path);
@@ -149,6 +157,7 @@ impl IFileDialog_Impl for FileOpenDialogProxy_Impl {
     }
 
     fn SetFolder(&self, psi: Option<&IShellItem>) -> Result<()> {
+        crate::log("picker: -> SetFolder");
         if let Some(si) = psi {
             if let Some(path) = shell_item_to_path(si) {
                 self.state.lock().unwrap().folder = Some(path);
@@ -158,6 +167,7 @@ impl IFileDialog_Impl for FileOpenDialogProxy_Impl {
     }
 
     fn GetFolder(&self) -> Result<IShellItem> {
+        crate::log("picker: -> GetFolder");
         let state = self.state.lock().unwrap();
         let dir = state.start_directory();
         drop(state);
@@ -165,10 +175,12 @@ impl IFileDialog_Impl for FileOpenDialogProxy_Impl {
     }
 
     fn GetCurrentSelection(&self) -> Result<IShellItem> {
+        crate::log("picker: -> GetCurrentSelection");
         self.GetResult()
     }
 
     fn SetFileName(&self, pszname: &PCWSTR) -> Result<()> {
+        crate::log("picker: -> SetFileName");
         let name = unsafe { pszname.to_string().unwrap_or_default() };
         self.state.lock().unwrap().file_name = Some(name);
         Ok(())
@@ -250,5 +262,15 @@ impl IFileOpenDialog_Impl for FileOpenDialogProxy_Impl {
 
     fn GetSelectedItems(&self) -> Result<IShellItemArray> {
         self.GetResults()
+    }
+}
+
+impl IFileDialog2_Impl for FileOpenDialogProxy_Impl {
+    fn SetCancelButtonLabel(&self, _pszlabel: &PCWSTR) -> Result<()> {
+        Ok(())
+    }
+
+    fn SetNavigationRoot(&self, _psi: Option<&IShellItem>) -> Result<()> {
+        Ok(())
     }
 }
