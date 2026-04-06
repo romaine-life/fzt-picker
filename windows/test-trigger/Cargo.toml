@@ -1,0 +1,15 @@
+[package]
+name = "picker-test-trigger"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "test-trigger"
+path = "src/main.rs"
+
+[dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_System_Com",
+    "Win32_UI_Shell",
+] }
