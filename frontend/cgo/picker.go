@@ -419,16 +419,16 @@ func createPickerWindow(title string) uintptr {
 	}
 	registerClassExW.Call(uintptr(unsafe.Pointer(&wc)))
 
-	// Get DPI for font scaling
+	// Get DPI for font scaling — match Windows Terminal's point-based sizing
 	getDpi := user32.NewProc("GetDpiForSystem")
 	dpi, _, _ := getDpi.Call()
 	if dpi == 0 {
 		dpi = 96
 	}
-	fontSize := int(dpi) * 20 / 96 // 20px at 96 DPI, scales up
+	// Convert points to pixels: -height for CreateFontW means character height in points
+	fontSize := -int(int(dpi) * tui.DefaultFontSize / 72)
 
-	// Create a monospace Nerd Font for icons
-	fontName, _ := syscall.UTF16PtrFromString("FiraCode Nerd Font Mono")
+	fontName, _ := syscall.UTF16PtrFromString(tui.DefaultFontName)
 	font, _, _ = createFontW.Call(
 		uintptr(uint32(fontSize)), // height
 		0, 0, 0,
@@ -483,55 +483,16 @@ func createPickerWindow(title string) uintptr {
 	return hwnd
 }
 
-// Catppuccin Mocha palette
-var catppuccin = map[tcell.Color]uint32{
-	tcell.ColorDefault: 0x1E1E2E, // base
-	tcell.ColorBlack:   0x45475A, // surface1
-	tcell.ColorMaroon:  0xEBA0AC, // maroon
-	tcell.ColorGreen:   0xA6E3A1, // green
-	tcell.ColorOlive:   0xF9E2AF, // yellow
-	tcell.ColorNavy:    0x89B4FA, // blue
-	tcell.ColorPurple:  0xF5C2E7, // pink
-	tcell.ColorTeal:    0x94E2D5, // teal
-	tcell.ColorSilver:  0xBAC2DE, // subtext1
-	tcell.ColorGray:    0x585B70, // surface2
-	tcell.ColorRed:     0xF38BA8, // red
-	tcell.ColorLime:    0xA6E3A1, // green
-	tcell.ColorYellow:  0xF9E2AF, // yellow
-	tcell.ColorBlue:    0x89B4FA, // blue
-	tcell.ColorFuchsia: 0xCBA6F7, // mauve
-	tcell.ColorAqua:    0x89DCEB, // sky
-	tcell.ColorWhite:   0xCDD6F4, // text
-}
-
-func colorToRGB(c tcell.Color) uint32 {
+// colorToBGR converts a tcell color to GDI's BGR format using the shared
+// palette from tui/style.go. The defaultRGB is used for tcell.ColorDefault
+// (pass tui.TextFgRGB for foreground, tui.BaseBgRGB for background).
+func colorToBGR(c tcell.Color, defaultRGB [3]uint8) uint32 {
+	var r, g, b uint8
 	if c == tcell.ColorDefault {
-		return 0x1E1E2E // Catppuccin base
+		r, g, b = defaultRGB[0], defaultRGB[1], defaultRGB[2]
+	} else {
+		r, g, b = tui.ColorToRGB(c)
 	}
-	if mapped, ok := catppuccin[c]; ok {
-		return mapped
-	}
-	// True color
-	r, g, b := c.RGB()
-	return uint32(b)<<16 | uint32(g)<<8 | uint32(r) // GDI uses BGR
-}
-
-func colorToBGR(c tcell.Color, defaultColor uint32) uint32 {
-	if c == tcell.ColorDefault {
-		// Convert default from RGB to BGR
-		r := (defaultColor >> 16) & 0xFF
-		g := (defaultColor >> 8) & 0xFF
-		b := defaultColor & 0xFF
-		return b<<16 | g<<8 | r
-	}
-	if mapped, ok := catppuccin[c]; ok {
-		// Palette is stored as RGB, convert to BGR for GDI
-		r := (mapped >> 16) & 0xFF
-		g := (mapped >> 8) & 0xFF
-		b := mapped & 0xFF
-		return b<<16 | g<<8 | r
-	}
-	r, g, b := c.RGB()
 	return uint32(b)<<16 | uint32(g)<<8 | uint32(r)
 }
 
@@ -568,8 +529,8 @@ func paintWindow(hwnd uintptr) {
 
 				if isWide {
 					// Draw wide character spanning 2 cells, centered
-					setTextColor.Call(hdc, uintptr(colorToBGR(fg, 0xCDD6F4)))
-					setBkColor.Call(hdc, uintptr(colorToBGR(bg, 0x1E1E2E)))
+					setTextColor.Call(hdc, uintptr(colorToBGR(fg, tui.TextFgRGB)))
+					setBkColor.Call(hdc, uintptr(colorToBGR(bg, tui.BaseBgRGB)))
 
 					rc := RECT{
 						Left:   int32(x * charW),
@@ -623,8 +584,8 @@ func paintWindow(hwnd uintptr) {
 					x++
 				}
 
-				setTextColor.Call(hdc, uintptr(colorToBGR(fg, 0xCDD6F4)))
-				setBkColor.Call(hdc, uintptr(colorToBGR(bg, 0x1E1E2E)))
+				setTextColor.Call(hdc, uintptr(colorToBGR(fg, tui.TextFgRGB)))
+				setBkColor.Call(hdc, uintptr(colorToBGR(bg, tui.BaseBgRGB)))
 
 				rc := RECT{
 					Left:   int32(runStart * charW),
@@ -653,7 +614,7 @@ func paintWindow(hwnd uintptr) {
 		// No grid yet — fill with background
 		var rc RECT
 		getClientRect.Call(hwnd, uintptr(unsafe.Pointer(&rc)))
-		setBkColor.Call(hdc, uintptr(colorToBGR(tcell.ColorDefault, 0x1E1E2E)))
+		setBkColor.Call(hdc, uintptr(colorToBGR(tcell.ColorDefault, tui.BaseBgRGB)))
 		extTextOutW.Call(hdc, 0, 0, ETO_OPAQUE, uintptr(unsafe.Pointer(&rc)), 0, 0, 0)
 	}
 
