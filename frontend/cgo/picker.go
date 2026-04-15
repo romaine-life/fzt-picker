@@ -444,7 +444,7 @@ func createPickerWindow(title string) uintptr {
 		0, 0, 0,
 		400, // weight (normal)
 		0, 0, 0, // italic, underline, strikeout
-		0, 0, 0, 0,
+		0, 0, 0, 0, // ANSI_CHARSET
 		uintptr(1), // FIXED_PITCH
 		uintptr(unsafe.Pointer(fontName)),
 	)
@@ -453,7 +453,7 @@ func createPickerWindow(title string) uintptr {
 		0, 0, 0,
 		700, // weight (bold)
 		0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, 0, 0, // ANSI_CHARSET
 		uintptr(1),
 		uintptr(unsafe.Pointer(fontName)),
 	)
@@ -462,7 +462,7 @@ func createPickerWindow(title string) uintptr {
 		0, 0, 0,
 		400,
 		1, 0, 0, // italic=1
-		0, 0, 0, 0,
+		0, 0, 0, 0, // ANSI_CHARSET
 		uintptr(1),
 		uintptr(unsafe.Pointer(fontName)),
 	)
@@ -613,8 +613,8 @@ func paintWindow(hwnd uintptr) {
 						c.Char = ' '
 					}
 					cp := int(c.Char)
-					if cp > 0xFFFF || (cp >= 0xE000 && cp <= 0xF8FF) {
-						break // wide char — draw separately
+					if cp > 0xFFFF || (cp >= 0xE000 && cp <= 0xF8FF) || (cp >= 0x2500 && cp <= 0x25FF) {
+						break // wide/special char — draw separately
 					}
 					cfG, cbG, cAttrs := c.Style.Decompose()
 					if cfG != fg || cbG != bg || cAttrs != attrs {
