@@ -15,6 +15,14 @@ jobs:
 
       # ── Rust (COM hook + injector + test-trigger) ──────────────
       - uses: dtolnay/rust-toolchain@nightly
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            windows/target
+          key: rust-${{ hashFiles('windows/Cargo.lock') }}
+          restore-keys: rust-
       - name: Build Rust binaries
         shell: bash
         working-directory: windows
@@ -35,8 +43,8 @@ jobs:
           go mod edit -dropreplace github.com/nelsong6/fzt
           go mod edit -dropreplace github.com/nelsong6/fzt-terminal
           go mod edit -droprequire github.com/nelsong6/fzt-terminal
-          GOPROXY=direct go get github.com/nelsong6/fzt@latest
-          GOPROXY=direct go get github.com/nelsong6/fzt-terminal@latest
+          go get github.com/nelsong6/fzt@latest
+          go get github.com/nelsong6/fzt-terminal@latest
           go mod tidy
 
       - name: Resolve local replace directives (cgo)
@@ -48,8 +56,8 @@ jobs:
           go mod edit -dropreplace github.com/nelsong6/fzt-picker/frontend
           go mod edit -droprequire github.com/nelsong6/fzt-terminal
           go mod edit -replace github.com/nelsong6/fzt-picker/frontend=../
-          GOPROXY=direct go get github.com/nelsong6/fzt@latest
-          GOPROXY=direct go get github.com/nelsong6/fzt-terminal@latest
+          go get github.com/nelsong6/fzt@latest
+          go get github.com/nelsong6/fzt-terminal@latest
           go mod tidy
 
       - name: Build CGo DLL
