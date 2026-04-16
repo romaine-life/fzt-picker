@@ -8,19 +8,20 @@ permissions:
   contents: write
 
 jobs:
-  update:
-    runs-on: ubuntu-latest
+  update-and-build:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: actions/setup-go@v5
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
           go-version-file: frontend/go.mod
+          cache-dependency-path: frontend/go.sum
 
       - name: Update dependencies
         working-directory: frontend
+        shell: bash
         run: |
           go get github.com/nelsong6/fzt@latest
           go get github.com/nelsong6/fzt-terminal@latest
@@ -28,18 +29,96 @@ jobs:
 
       - name: Check for changes
         id: diff
+        shell: bash
         run: |
           if git diff --quiet frontend/go.mod frontend/go.sum; then
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "Already on latest"
           else
             echo "changed=true" >> $GITHUB_OUTPUT
-            echo "go.mod updated:"
             git diff frontend/go.mod
           fi
 
-      - name: Commit and push
+      # ── Build (only if dependencies changed) ──────────────────
+
+      - name: Setup Rust
         if: steps.diff.outputs.changed == 'true'
+        uses: dtolnay/rust-toolchain@nightly
+
+      - uses: actions/cache@v4
+        if: steps.diff.outputs.changed == 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            windows/target
+          key: rust-${{ hashFiles('windows/Cargo.lock') }}
+          restore-keys: rust-
+
+      - name: Build Rust binaries
+        if: steps.diff.outputs.changed == 'true'
+        shell: bash
+        working-directory: windows
+        run: cargo build --release
+
+      - uses: actions/cache@v4
+        if: steps.diff.outputs.changed == 'true'
+        id: msys2-cache
+        with:
+          path: C:\msys64\ucrt64
+          key: msys2-ucrt64-gcc
+      - name: Install MinGW GCC
+        if: steps.diff.outputs.changed == 'true' && steps.msys2-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: C:/msys64/usr/bin/pacman.exe -S --noconfirm mingw-w64-ucrt-x86_64-gcc
+
+      - name: Build CGo DLL
+        if: steps.diff.outputs.changed == 'true'
+        shell: bash
+        working-directory: frontend
+        env:
+          CGO_ENABLED: "1"
+          CC: C:\msys64\ucrt64\bin\gcc.exe
+        run: go build -buildmode=c-shared -o picker_frontend.dll ./cgo
+
+      - name: Build standalone frontend
+        if: steps.diff.outputs.changed == 'true'
+        shell: bash
+        working-directory: frontend
+        env:
+          CGO_ENABLED: "0"
+        run: go build -o picker-frontend.exe .
+
+      # ── Release + commit ───────────────────────────────────────
+
+      - name: Create release
+        if: steps.diff.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir release
+          cp windows/target/release/picker_hook.dll release/
+          cp windows/target/release/picker.exe release/
+          cp windows/target/release/test-trigger.exe release/
+          cp frontend/picker_frontend.dll release/
+          cp frontend/picker-frontend.exe release/
+
+          latest=$(gh release list -R ${{ github.repository }} --limit 1 --json tagName -q '.[0].tagName // empty' 2>/dev/null || echo "")
+          if [ -z "$latest" ]; then
+            next="v0.1.0"
+          else
+            patch=$(echo "$latest" | sed 's/v[0-9]*\.[0-9]*\.//')
+            next="v0.1.$((patch + 1))"
+          fi
+          gh release create "$next" release/* \
+            -R ${{ github.repository }} \
+            --title "$next" \
+            --notes "$(git log --oneline -1)"
+
+      - name: Commit updated go.mod
+        if: steps.diff.outputs.changed == 'true'
+        shell: bash
         run: |
           FZT_VER=$(grep 'github.com/nelsong6/fzt ' frontend/go.mod | awk '{print $2}')
           TERM_VER=$(grep 'github.com/nelsong6/fzt-terminal ' frontend/go.mod | awk '{print $2}')
