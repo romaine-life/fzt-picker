@@ -2,17 +2,30 @@ use windows::Win32::System::Com::*;
 use windows::Win32::UI::Shell::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let folders_only = std::env::args().any(|a| a == "--folders");
+
     unsafe {
         CoInitializeEx(None, COINIT_APARTMENTTHREADED).ok()?;
     }
 
-    println!("test-trigger: calling CoCreateInstance for FileOpenDialog...");
+    println!(
+        "test-trigger: calling CoCreateInstance for FileOpenDialog (folders_only={folders_only})..."
+    );
 
     let dialog: IFileOpenDialog = unsafe {
         CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER)?
     };
 
-    println!("test-trigger: got IFileOpenDialog, calling Show()...");
+    if folders_only {
+        unsafe {
+            let mut opts = dialog.GetOptions()?;
+            opts |= FILEOPENDIALOGOPTIONS(0x20); // FOS_PICKFOLDERS
+            dialog.SetOptions(opts)?;
+        }
+        println!("test-trigger: set FOS_PICKFOLDERS");
+    }
+
+    println!("test-trigger: calling Show()...");
 
     let result = unsafe { dialog.Show(None) };
 

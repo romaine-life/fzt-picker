@@ -66,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if i < 127 { tip[i] = c; }
         }
 
-        let icon = LoadIconW(None, IDI_APPLICATION)?;
+        let icon = LoadIconW(hinst, PCWSTR(1 as *const u16))?;
 
         let mut nid = NOTIFYICONDATAW {
             cbSize: std::mem::size_of::<NOTIFYICONDATAW>() as u32,

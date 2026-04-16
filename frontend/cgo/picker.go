@@ -6,7 +6,6 @@ package main
 import "C"
 
 import (
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -17,6 +16,8 @@ import (
 	"github.com/nelsong6/fzt/core"
 	"github.com/nelsong6/fzt/render"
 	"github.com/nelsong6/fzt-terminal/tui"
+
+	"github.com/nelsong6/fzt-picker/frontend/picker"
 )
 
 // Win32 API
@@ -188,13 +189,17 @@ func runPicker(foldersOnly bool, startDir string, hwndOwner uintptr) string {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
+	// Reset all package-level state for a clean invocation
+	pickerMu.Lock()
+	pickerSession = nil
+	pickerFrame = render.SessionFrame{}
+	pickerGrid = nil
+	pickerMu.Unlock()
 	ownerHwnd = hwndOwner
 	pickerResult = ""
+	pickerHwnd = 0
 
-	title := "Pick a file"
-	if foldersOnly {
-		title = "Pick a folder"
-	}
+	title := picker.DefaultTitle(foldersOnly)
 
 	// Create the window first — this computes gridCols/gridRows from screen size
 	hwnd := createPickerWindow(title)
@@ -203,33 +208,20 @@ func runPicker(foldersOnly bool, startDir string, hwndOwner uintptr) string {
 	}
 	pickerHwnd = hwnd
 
-	// Build initial items using DirProvider wrapped to filter hidden files
-	provider := &pickerDirProvider{inner: core.NewDirProvider()}
-	var items []core.Item
-	if startDir != "" {
-		items = provider.LoadChildren(startDir)
-	}
-	if len(items) == 0 {
-		items = core.ListDriveRoots()
-	}
+	// Build initial items — always start at drive roots
+	provider := picker.NewDirProvider(foldersOnly)
+	items := core.ListDriveRoots()
 
-	headerItem := core.Item{Fields: []string{"Name"}, Depth: -1}
+	headerItem := picker.HeaderItem("Name")
 	items = append([]core.Item{headerItem}, items...)
 
-	cfg := tui.Config{
-		Layout:       "reverse",
-		Border:       true,
-		Tiered:       true,
-		DepthPenalty: 5,
-		HeaderLines:  1,
-		Nth:          []int{1},
-		AcceptNth:    []int{1},
-		Title:        title,
-		TreeMode:     true,
-		FrontendName: "picker",
-		Provider:     provider,
-		FocusedDir:   startDir,
-	}
+	cfg := picker.NewConfig(picker.Options{
+		FoldersOnly: foldersOnly,
+		StartDir:    startDir,
+		Provider:    provider,
+		AcceptNth:   []int{1},
+		Title:       title,
+	})
 
 	pickerSession = tui.NewTreeSession(items, cfg, gridCols, gridRows)
 
@@ -303,7 +295,7 @@ func handleKeyInput(key tcell.Key, ch rune) {
 	pickerMu.Unlock()
 
 	if strings.HasPrefix(action, "select:") {
-		pickerResult = strings.TrimSpace(action[7:])
+		pickerResult = pickerSession.SelectedItemPath()
 		postQuitMessageFn.Call(0)
 		return
 	}
@@ -444,7 +436,7 @@ func createPickerWindow(title string) uintptr {
 		0, 0, 0,
 		400, // weight (normal)
 		0, 0, 0, // italic, underline, strikeout
-		0, 0, 0, 0, // ANSI_CHARSET
+		1, 0, 0, 0, // DEFAULT_CHARSET
 		uintptr(1), // FIXED_PITCH
 		uintptr(unsafe.Pointer(fontName)),
 	)
@@ -453,7 +445,7 @@ func createPickerWindow(title string) uintptr {
 		0, 0, 0,
 		700, // weight (bold)
 		0, 0, 0,
-		0, 0, 0, 0, // ANSI_CHARSET
+		1, 0, 0, 0, // DEFAULT_CHARSET
 		uintptr(1),
 		uintptr(unsafe.Pointer(fontName)),
 	)
@@ -462,7 +454,7 @@ func createPickerWindow(title string) uintptr {
 		0, 0, 0,
 		400,
 		1, 0, 0, // italic=1
-		0, 0, 0, 0, // ANSI_CHARSET
+		1, 0, 0, 0, // DEFAULT_CHARSET
 		uintptr(1),
 		uintptr(unsafe.Pointer(fontName)),
 	)
@@ -613,8 +605,8 @@ func paintWindow(hwnd uintptr) {
 						c.Char = ' '
 					}
 					cp := int(c.Char)
-					if cp > 0xFFFF || (cp >= 0xE000 && cp <= 0xF8FF) || (cp >= 0x2500 && cp <= 0x25FF) {
-						break // wide/special char — draw separately
+					if cp > 0xFFFF || (cp >= 0xE000 && cp <= 0xF8FF) {
+						break // wide char (icon) — draw separately
 					}
 					cfG, cbG, cAttrs := c.Style.Decompose()
 					if cfG != fg || cbG != bg || cAttrs != attrs {
@@ -692,36 +684,6 @@ func parseANSIGrid(ansi string, cols, rows int) [][]core.StyledRune {
 	}
 
 	return grid
-}
-
-// pickerDirProvider wraps DirProvider and filters out hidden/system files on Windows.
-type pickerDirProvider struct {
-	inner *core.DirProvider
-}
-
-func (p *pickerDirProvider) LoadChildren(parentPath string) []core.Item {
-	items := p.inner.LoadChildren(parentPath)
-	var filtered []core.Item
-	for _, item := range items {
-		name := item.Fields[0]
-		fullPath := filepath.Join(parentPath, name)
-		if isHiddenFile(fullPath) {
-			continue
-		}
-		filtered = append(filtered, item)
-	}
-	return filtered
-}
-
-func isHiddenFile(path string) bool {
-	pathW, _ := syscall.UTF16PtrFromString(path)
-	attrs, err := syscall.GetFileAttributes(pathW)
-	if err != nil {
-		return false
-	}
-	const FILE_ATTRIBUTE_HIDDEN = 0x2
-	const FILE_ATTRIBUTE_SYSTEM = 0x4
-	return attrs&(FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM) != 0
 }
 
 func main() {}

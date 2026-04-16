@@ -33,9 +33,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: frontend/go.mod
-          cache-dependency-path: |
-            frontend/go.sum
-            frontend/cgo/go.sum
+          cache-dependency-path: frontend/go.sum
 
       - uses: actions/cache@v4
         id: msys2-cache
@@ -47,37 +45,13 @@ jobs:
         shell: bash
         run: C:/msys64/usr/bin/pacman.exe -S --noconfirm mingw-w64-ucrt-x86_64-gcc
 
-      - name: Resolve local replace directives (frontend)
-        shell: bash
-        working-directory: frontend
-        run: |
-          go mod edit -dropreplace github.com/nelsong6/fzt
-          go mod edit -dropreplace github.com/nelsong6/fzt-terminal
-          go mod edit -droprequire github.com/nelsong6/fzt-terminal
-          go get github.com/nelsong6/fzt@latest
-          go get github.com/nelsong6/fzt-terminal@latest
-          go mod tidy
-
-      - name: Resolve local replace directives (cgo)
-        shell: bash
-        working-directory: frontend/cgo
-        run: |
-          go mod edit -dropreplace github.com/nelsong6/fzt
-          go mod edit -dropreplace github.com/nelsong6/fzt-terminal
-          go mod edit -dropreplace github.com/nelsong6/fzt-picker/frontend
-          go mod edit -droprequire github.com/nelsong6/fzt-terminal
-          go mod edit -replace github.com/nelsong6/fzt-picker/frontend=../
-          go get github.com/nelsong6/fzt@latest
-          go get github.com/nelsong6/fzt-terminal@latest
-          go mod tidy
-
       - name: Build CGo DLL
         shell: bash
-        working-directory: frontend/cgo
+        working-directory: frontend
         env:
           CGO_ENABLED: "1"
           CC: C:\msys64\ucrt64\bin\gcc.exe
-        run: go build -buildmode=c-shared -o ../picker_frontend.dll .
+        run: go build -buildmode=c-shared -o picker_frontend.dll ./cgo
 
       - name: Build standalone frontend
         shell: bash
