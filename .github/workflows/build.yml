@@ -54,18 +54,21 @@ jobs:
               && cd .. ^
               && set CGO_ENABLED=0 ^
               && go build -o picker-frontend.exe . ^
+              && cd .. ^
+              && mkdir release ^
+              && copy windows\\target\\release\\picker_hook.dll release\\ ^
+              && copy windows\\target\\release\\picker.exe release\\ ^
+              && copy windows\\target\\release\\test-trigger.exe release\\ ^
+              && copy frontend\\picker_frontend.dll release\\ ^
+              && copy frontend\\picker-frontend.exe release\\ ^
             "
 
       # ── Release ────────────────────────────────────────────────
-      - name: Prepare release assets
+      - name: Copy release assets from container
         shell: bash
         run: |
-          mkdir release
-          cp windows/target/release/picker_hook.dll release/
-          cp windows/target/release/picker.exe release/
-          cp windows/target/release/test-trigger.exe release/
-          cp frontend/picker_frontend.dll release/
-          cp frontend/picker-frontend.exe release/
+          # Container wrote to the bind mount; verify files exist
+          ls -la release/
 
       - name: Create versioned release
         shell: bash
