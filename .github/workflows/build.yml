@@ -36,6 +36,10 @@ jobs:
             frontend/go.sum
             frontend/cgo/go.sum
 
+      - name: Install MinGW GCC
+        shell: bash
+        run: C:/msys64/usr/bin/pacman.exe -S --noconfirm mingw-w64-ucrt-x86_64-gcc
+
       - name: Resolve local replace directives (frontend)
         shell: bash
         working-directory: frontend
