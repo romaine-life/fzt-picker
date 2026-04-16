@@ -36,7 +36,13 @@ jobs:
             frontend/go.sum
             frontend/cgo/go.sum
 
+      - uses: actions/cache@v4
+        id: msys2-cache
+        with:
+          path: C:\msys64\ucrt64
+          key: msys2-ucrt64-gcc
       - name: Install MinGW GCC
+        if: steps.msys2-cache.outputs.cache-hit != 'true'
         shell: bash
         run: C:/msys64/usr/bin/pacman.exe -S --noconfirm mingw-w64-ucrt-x86_64-gcc
 
