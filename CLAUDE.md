@@ -17,7 +17,7 @@ COM's `IModalWindow::Show()` must present a visible window owned by the host app
 
 - **hook DLL** (`picker-hook.dll`): Loaded into every GUI process via `SetWindowsHookEx`. Hooks `CoCreateInstance` in `combase.dll` to intercept `CLSID_FileOpenDialog`. Returns a COM proxy.
 - **injector** (`picker.exe`): Windows GUI app (no console) that installs the global CBT hook and maintains a message loop. Shows a system tray icon ("fzt picker") with right-click Exit. Killing it removes the hook from new processes.
-- **test-trigger** (`test-trigger.exe`): Standalone binary that calls `CoCreateInstance(CLSID_FileOpenDialog)` and `Show()` to test the hook without needing a real app.
+- **test-trigger** (`test-trigger.exe`): Standalone binary that calls `CoCreateInstance(CLSID_FileOpenDialog)` and `Show()` to test the hook without needing a real app. `--folders` flag sets `FOS_PICKFOLDERS` to test folder-pick mode.
 
 ### Data flow
 
@@ -26,7 +26,7 @@ COM's `IModalWindow::Show()` must present a visible window owned by the host app
 3. App calls `Show()` → proxy loads `picker_frontend.dll` via `LoadLibrary`, calls `PickFile(filter, foldersOnly, startDir, ownerHwnd)`
 4. Go DLL creates a visible Win32 window owned by the host app's HWND
 5. Go DLL disables the owner window (modal behavior)
-6. Headless fzt session with `DirProvider` loads the start directory's contents
+6. Headless fzt session with `DirProvider` loads drive roots (or start directory's contents)
 7. Session renders ANSI → parsed to styled character grid → GDI `ExtTextOutW` with `ETO_OPAQUE`
 8. `WM_KEYDOWN`/`WM_CHAR` events feed `session.HandleKey()`, repainting on each change
 9. `GetMessage`/`DispatchMessage` modal loop keeps the host app responsive
@@ -37,6 +37,15 @@ COM's `IModalWindow::Show()` must present a visible window owned by the host app
 
 Picker reads all colors from `tui/style.go` (`tui.PaletteRGB`, `tui.ColorToRGB()`) and font config from `tui.DefaultFontName`/`tui.DefaultFontSize`. The GDI renderer maps tcell styles to GDI calls — this is the only picker-specific rendering code. Style changes in fzt-terminal apply to picker on rebuild.
 
+### Folder-only mode
+
+When an app sets `FOS_PICKFOLDERS` (e.g. Electron's `dialog.showOpenDialog({ properties: ['openDirectory'] })`), the COM proxy detects the flag in `SetOptions` and passes `foldersOnly=true` to the frontend. This triggers two behaviors:
+
+- **DirProvider filtering**: `picker.DirProvider` skips non-directory items in `LoadChildren`, so only folders appear in the tree.
+- **Folder selection**: fzt's `Config.FoldersOnly` changes the Enter key behavior — Enter on a folder you're already scoped into returns `"select:"` instead of no-op, giving a two-press gesture (Enter to navigate in, Enter again to confirm selection).
+
+Both the COM hook path and standalone binary use the same DirProvider and config, so behavior is identical. The standalone binary accepts `--folders-only` to enable this mode.
+
 ## Dependencies
 
 - **fzt / fzt-terminal**: Headless session, style constants, DirProvider for lazy directory loading.
@@ -45,9 +54,9 @@ Picker reads all colors from `tui/style.go` (`tui.PaletteRGB`, `tui.ColorToRGB()
 
 ### Shared vs rendering-specific code
 
-The CGo DLL and standalone binary share item loading, DirProvider setup, hidden file filtering, and session config. This should live in a shared package (`frontend/picker/`) that both import:
+The CGo DLL and standalone binary share item loading, DirProvider setup, hidden file filtering, and session config via the `frontend/picker/` package:
 
-- **`frontend/picker/`** — shared: `pickerDirProvider` (wraps `core.DirProvider` with hidden file filtering), item loading from a start directory, session config (layout, border, tiered, AcceptNth, etc.)
+- **`frontend/picker/`** — shared: `DirProvider` (wraps `core.DirProvider` with hidden file filtering and folder-only filtering), `NewConfig` (shared tui.Config builder), `HeaderItem`
 - **`frontend/cgo/`** — CGo DLL: Win32 window + GDI rendering + modal message loop (COM hook path)
 - **`frontend/`** — standalone binary: `tui.Run()` via tcell (shell path, `explore` at-command)
 
@@ -91,7 +100,7 @@ The CGo frontend DLL (`picker_frontend.dll`) also gets locked by processes that 
 
 ## Logging
 
-The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each log line is append + close to handle concurrent writes from multiple hooked processes. QI (QueryInterface) logging is patched into the proxy's vtable for debugging.
+The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each log line is append + close to handle concurrent writes from multiple hooked processes.
 
 ## Changelog
 
@@ -99,31 +108,38 @@ The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each 
 
 - COM hook via `retour` detours `CoCreateInstance` for `CLSID_FileOpenDialog`
 - Full `IFileOpenDialog` proxy (26 methods): Set* methods store state, `Show()` spawns fzt, `GetResult()` returns `IShellItem`
-- Everything-backed file discovery with YAML tree generation
 - Injector via `SetWindowsHookEx(WH_CBT)` for system-wide DLL loading
-
-### 2026-04-06: Bug fixes
-
-- Fixed folder-only mode blank display
-- Added Everything exclusions (`.git`, `$Recycle.Bin`, `node_modules`)
-- Bumped result limit 10,000 → 50,000
 
 ### 2026-04-13–14: Architecture overhaul
 
 - **IFileDialogCustomize stub** — Notepad requires this interface. Added no-op implementation for all 27 methods.
-- **QI logging** — Patched proxy vtable's QueryInterface to diagnose COM failures.
 - **Go CGo DLL frontend** — Replaced subprocess model with in-process CGo DLL. The Rust hook loads `picker_frontend.dll` via `LoadLibrary` and calls `PickFile()` directly. No pipe, no subprocess, no stdout parsing.
 - **Visible Win32 window** — Creates a real Win32 window owned by the host app. Runs a proper modal message loop via `GetMessage`/`DispatchMessage`. Solves the "not responding" issue that plagued all previous approaches.
-- **GDI text rendering** — Headless fzt session renders ANSI, parsed to a styled character grid, drawn via `ExtTextOutW` with `ETO_OPAQUE` (no flicker). Italic/bold font variants for hint text and selection indicators. Wide character (Nerd Font icon) handling with surrogate pair support.
+- **GDI text rendering** — Headless fzt session renders ANSI, parsed to a styled character grid, drawn via `ExtTextOutW` with `ETO_OPAQUE` (no flicker). Italic/bold font variants for hint text and selection indicators. Wide character (Nerd Font icon) handling with surrogate pair support. DEFAULT_CHARSET for broad Unicode coverage.
 - **Shared style system** — Colors from `tui.PaletteRGB`/`tui.ColorToRGB()`, font from `tui.DefaultFontName`/`tui.DefaultFontSize`. No hardcoded palette in picker.
-- **DirProvider lazy loading** — Starts from the app's requested directory (`SetFolder`/`SetDefaultFolder`), loads children on navigate. No more Everything query, instant startup.
+- **DirProvider lazy loading** — Starts at drive roots, loads children on navigate via `DirProvider`. No more Everything query for the COM path.
 - **Hidden file filtering** — Filters Windows hidden/system files via file attributes.
-- **System tray icon** — Injector is a GUI app (no console). Shows tray icon with right-click Exit.
+- **System tray icon** — Injector is a GUI app (no console). Mining pick icon embedded via `winresource` crate. Right-click to exit.
 - **`explore` at-command** — Added to `at-commands.ps1`, calls `picker-frontend --folders-only` and opens the result in Explorer. Leaf added to at-menu cloud database.
+- **Shared package** — `frontend/picker/` extracts `DirProvider`, `NewConfig`, `HeaderItem` shared by CGo DLL and standalone binary.
+- **Full path selection** — `Session.SelectedItemPath()` walks the tree to return filesystem paths. `ItemFullPath` fixed to handle bare drive letters (`D:` → `D:\`).
+- **Selection indicator** — `▸` (U+25B8) replaced with FA chevron (U+F054, Nerd Font PUA) for GDI compatibility.
+
+### 2026-04-15: Folder-only mode
+
+- **Folder-only filtering** — `picker.DirProvider` takes a `foldersOnly` flag; `LoadChildren` skips non-directory items. Hidden/system folders filtered via `GetFileAttributes`.
+- **Folder selection gesture** — `FoldersOnly` config in fzt core. Enter on an already-scoped folder returns `"select:"` (double-Enter: navigate in, then confirm).
+- **Removed Everything code path** — Standalone binary no longer uses Everything/es.exe. Always uses DirProvider + drive roots, matching the COM hook path.
+- **test-trigger `--folders` flag** — Sets `FOS_PICKFOLDERS` for testing folder-pick mode via COM hook.
+
+### 2026-04-16: CI workflow
+
+- **GitHub Actions build** (`.github/workflows/build.yml`) — Builds Rust (nightly) and Go (CGo DLL + standalone) on `windows-latest`. Resolves local `replace` directives, fetches fzt/fzt-terminal from Go module proxy. Creates versioned GitHub releases with all binaries.
+- **Caching** — Cargo registry/target keyed on `Cargo.lock`, MSYS2 ucrt64 (skips GCC install on warm runs). Cached build: ~2min.
+- **Container image** — Dockerfile with Go/Rust/GCC on servercore:ltsc2022, pushed to GHCR via `image.yml`. Not used in build workflow (image pull on ephemeral runners is slower than cached setup). Available for future self-hosted runner use.
 
 ### Known limitations
 
-- **Selection indicator glyph** — `▸` (U+25B8) renders as `?` in GDI with ANSI_CHARSET. The font has the glyph (renders fine in WT) but GDI's charset restriction prevents it.
 - **Icon sizing** — Nerd Font icons appear smaller than in Windows Terminal. GDI renders at cell height; WT/CSS scale them differently.
 - **IFileSaveDialog**: Detected but passes through to standard dialog
 - **No fallback**: If frontend DLL fails to load, the dialog fails with ERROR_CANCELLED
