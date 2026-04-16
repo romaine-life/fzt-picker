@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths-ignore: [Dockerfile]
+  workflow_dispatch:
 
 permissions:
   contents: write
