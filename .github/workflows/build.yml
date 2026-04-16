@@ -24,9 +24,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: frontend/go.mod
-          cache-dependency-path: frontend/go.sum
+          cache-dependency-path: |
+            frontend/go.sum
+            frontend/cgo/go.sum
 
-      - name: Resolve local replace directives
+      - name: Resolve local replace directives (frontend)
         shell: bash
         working-directory: frontend
         run: |
@@ -37,13 +39,26 @@ jobs:
           GOPROXY=direct go get github.com/nelsong6/fzt-terminal@latest
           go mod tidy
 
+      - name: Resolve local replace directives (cgo)
+        shell: bash
+        working-directory: frontend/cgo
+        run: |
+          go mod edit -dropreplace github.com/nelsong6/fzt
+          go mod edit -dropreplace github.com/nelsong6/fzt-terminal
+          go mod edit -dropreplace github.com/nelsong6/fzt-picker/frontend
+          go mod edit -droprequire github.com/nelsong6/fzt-terminal
+          go mod edit -replace github.com/nelsong6/fzt-picker/frontend=../
+          GOPROXY=direct go get github.com/nelsong6/fzt@latest
+          GOPROXY=direct go get github.com/nelsong6/fzt-terminal@latest
+          go mod tidy
+
       - name: Build CGo DLL
         shell: bash
-        working-directory: frontend
+        working-directory: frontend/cgo
         env:
           CGO_ENABLED: "1"
           CC: C:\msys64\ucrt64\bin\gcc.exe
-        run: go build -buildmode=c-shared -o picker_frontend.dll ./cgo
+        run: go build -buildmode=c-shared -o ../picker_frontend.dll .
 
       - name: Build standalone frontend
         shell: bash
