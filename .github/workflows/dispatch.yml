@@ -24,3 +24,6 @@ jobs:
     with:
       go-mod-path: frontend
       modules: github.com/nelsong6/fzt github.com/nelsong6/fzt-terminal
+      # Leaf with binary artifacts (Rust + Go): atomic release, no downstream
+      # dispatch, then fire build.yml with the new tag to build + upload.
+      artifact-build-workflow: build.yml
