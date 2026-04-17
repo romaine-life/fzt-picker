@@ -1,10 +1,16 @@
 name: Build
 
+# Called by the dep-update template AFTER it cuts a release. Builds the
+# Rust COM hook + injector + Go CGo DLL + standalone frontend for the
+# given tag and uploads all assets to the existing release.
+
 on:
-  push:
-    branches: [main]
-    paths-ignore: [Dockerfile]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build artifacts for (and upload to)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -14,6 +20,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
 
       # ── Rust (COM hook + injector + test-trigger) ──────────────
       - uses: dtolnay/rust-toolchain@nightly
@@ -61,30 +69,17 @@ jobs:
           CGO_ENABLED: "0"
         run: go build -o picker-frontend.exe .
 
-      # ── Release ────────────────────────────────────────────────
-      - name: Prepare release assets
-        shell: bash
-        run: |
-          mkdir release
-          cp windows/target/release/picker_hook.dll release/
-          cp windows/target/release/picker.exe release/
-          cp windows/target/release/test-trigger.exe release/
-          cp frontend/picker_frontend.dll release/
-          cp frontend/picker-frontend.exe release/
-
-      - name: Create versioned release
+      # ── Upload to existing release ─────────────────────────────
+      - name: Upload assets to release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          latest=$(gh release list -R ${{ github.repository }} --limit 1 --json tagName -q '.[0].tagName // empty' 2>/dev/null || echo "")
-          if [ -z "$latest" ]; then
-            next="v0.1.0"
-          else
-            patch=$(echo "$latest" | sed 's/v[0-9]*\.[0-9]*\.//')
-            next="v0.1.$((patch + 1))"
-          fi
-          gh release create "$next" release/* \
-            -R ${{ github.repository }} \
-            --title "$next" \
-            --notes "$(git log --oneline -1)"
+          gh release upload ${{ inputs.tag }} \
+            windows/target/release/picker_hook.dll \
+            windows/target/release/picker.exe \
+            windows/target/release/test-trigger.exe \
+            frontend/picker_frontend.dll \
+            frontend/picker-frontend.exe \
+            --clobber \
+            -R ${{ github.repository }}
