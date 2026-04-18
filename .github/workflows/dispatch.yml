@@ -15,7 +15,9 @@ permissions:
   id-token: write
 
 concurrency:
-  group: dependency-update
+  # Shared with release.yml so tag-cutting is serialized across dep-update
+  # and direct-push release paths (prevents patch-number races).
+  group: release-tag
   cancel-in-progress: false
 
 jobs:
