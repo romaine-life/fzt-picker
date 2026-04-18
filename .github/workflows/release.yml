@@ -14,6 +14,11 @@ on:
     paths-ignore:
       - 'frontend/go.mod'
       - 'frontend/go.sum'
+  # Manual recovery: fire the release path without advancing HEAD. Useful
+  # when a cascade stranded code on main without a tag and we need to
+  # re-release the existing HEAD. The template's skip guard correctly
+  # no-ops if the latest release is already at HEAD.
+  workflow_dispatch:
 
 concurrency:
   group: release-tag
