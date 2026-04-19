@@ -1,5 +1,5 @@
 [package]
-name = "picker-hook"
+name = "fzt-picker-hook"
 version = "0.1.0"
 edition = "2021"
 

@@ -60,14 +60,14 @@ jobs:
         env:
           CGO_ENABLED: "1"
           CC: C:\msys64\ucrt64\bin\gcc.exe
-        run: go build -buildmode=c-shared -o picker_frontend.dll ./cgo
+        run: go build -buildmode=c-shared -o fzt_picker_frontend.dll ./cgo
 
       - name: Build standalone frontend
         shell: bash
         working-directory: frontend
         env:
           CGO_ENABLED: "0"
-        run: go build -o picker-frontend.exe .
+        run: go build -o fzt-picker-frontend.exe .
 
       # ── Upload to existing release ─────────────────────────────
       - name: Upload assets to release
@@ -76,10 +76,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${{ inputs.tag }} \
-            windows/target/release/picker_hook.dll \
-            windows/target/release/picker.exe \
+            windows/target/release/fzt_picker_hook.dll \
+            windows/target/release/fzt-picker.exe \
             windows/target/release/test-trigger.exe \
-            frontend/picker_frontend.dll \
-            frontend/picker-frontend.exe \
+            frontend/fzt_picker_frontend.dll \
+            frontend/fzt-picker-frontend.exe \
             --clobber \
             -R ${{ github.repository }}

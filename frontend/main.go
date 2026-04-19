@@ -1,13 +1,13 @@
-// picker-frontend — fzt-powered file picker TUI.
+// fzt-picker-frontend — fzt-powered file picker TUI.
 //
 // Standalone frontend for the picker. Uses DirProvider for lazy tree browsing
 // with hidden/system file filtering. Starts from drive roots or a specified directory.
 //
 // Usage:
 //
-//	picker-frontend
-//	picker-frontend --folders-only
-//	picker-frontend --start-dir "D:\repos"
+//	fzt-picker-frontend
+//	fzt-picker-frontend --folders-only
+//	fzt-picker-frontend --start-dir "D:\repos"
 package main
 
 import (
@@ -59,7 +59,7 @@ func main() {
 		case "--debug-echo":
 			// Emits the given path via the same fmt.Println(strings.TrimSpace(...))
 			// the real picker uses on selection — lets us test the shell-side
-			// capture chain (`$path = picker-frontend ...` → explorer.exe)
+			// capture chain (`$path = fzt-picker-frontend ...` → explorer.exe)
 			// without blocking on an interactive pick.
 			if i+1 < len(args) {
 				fmt.Println(strings.TrimSpace(args[i+1]))
@@ -86,7 +86,7 @@ func main() {
 	}
 
 	if len(items) == 0 {
-		fmt.Fprintln(os.Stderr, "picker-frontend: no items found")
+		fmt.Fprintln(os.Stderr, "fzt-picker-frontend: no items found")
 		os.Exit(1)
 	}
 
@@ -105,7 +105,7 @@ func main() {
 
 	result, err := tui.Run(items, cfg)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "picker-frontend: %v\n", err)
+		fmt.Fprintf(os.Stderr, "fzt-picker-frontend: %v\n", err)
 		os.Exit(1)
 	}
 

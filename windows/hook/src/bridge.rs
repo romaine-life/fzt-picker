@@ -26,12 +26,12 @@ pub fn run_picker(
 
         // char* PickFile(char* filter, int foldersOnly, char* startDir, uintptr_t hwndOwner)
         let pick_file_addr = GetProcAddress(hmod, windows::core::s!("PickFile"))
-            .ok_or("PickFile not found in picker_frontend.dll")?;
+            .ok_or("PickFile not found in fzt_picker_frontend.dll")?;
         let pick_file: unsafe extern "C" fn(*const i8, i32, *const i8, usize) -> *mut i8 =
             std::mem::transmute(pick_file_addr);
 
         let free_string_addr = GetProcAddress(hmod, windows::core::s!("FreeString"))
-            .ok_or("FreeString not found in picker_frontend.dll")?;
+            .ok_or("FreeString not found in fzt_picker_frontend.dll")?;
         let free_string: unsafe extern "C" fn(*mut i8) = std::mem::transmute(free_string_addr);
 
         let filter_cstr = filter.map(|f| CString::new(f).unwrap());
@@ -72,16 +72,16 @@ fn find_picker_dll() -> Result<String, Box<dyn std::error::Error>> {
     if let Ok(userprofile) = std::env::var("USERPROFILE") {
         let candidate = Path::new(&userprofile)
             .join("bin")
-            .join("picker_frontend.dll");
+            .join("fzt_picker_frontend.dll");
         if candidate.exists() {
             return Ok(candidate.to_string_lossy().to_string());
         }
     }
 
-    let dev = "D:\\repos\\picker\\frontend\\cgo\\picker_frontend.dll";
+    let dev = "D:\\repos\\fzt-picker\\frontend\\cgo\\fzt_picker_frontend.dll";
     if Path::new(dev).exists() {
         return Ok(dev.to_string());
     }
 
-    Err("picker_frontend.dll not found".into())
+    Err("fzt_picker_frontend.dll not found".into())
 }

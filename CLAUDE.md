@@ -1,4 +1,4 @@
-# picker
+# fzt-picker
 
 Replaces the Windows file picker dialog (IFileOpenDialog) with fzt's fuzzy finder TUI. When any app opens File > Open, a fzt tree view appears instead of the standard dialog.
 
@@ -7,7 +7,7 @@ Replaces the Windows file picker dialog (IFileOpenDialog) with fzt's fuzzy finde
 Two layers:
 
 - **COM hook (Rust, `windows/`)**: Hook DLL + injector. Intercepts `CoCreateInstance` for `IFileOpenDialog` via `retour` detours. Returns a COM proxy implementing `IFileOpenDialog`, `IFileDialog`, `IFileDialog2`, and `IFileDialogCustomize`. When `Show()` is called, loads the Go CGo DLL in-process and calls `PickFile()`.
-- **Frontend (Go, `frontend/cgo/`)**: CGo DLL (`picker_frontend.dll`) loaded in-process by the hook DLL. Creates a visible Win32 window owned by the host app, runs a headless fzt session (`tui.NewTreeSession`), renders via GDI `ExtTextOutW`, and runs a proper modal message loop (`GetMessage`/`DispatchMessage`). Uses `DirProvider` for lazy directory loading.
+- **Frontend (Go, `frontend/cgo/`)**: CGo DLL (`fzt_picker_frontend.dll`) loaded in-process by the hook DLL. Creates a visible Win32 window owned by the host app, runs a headless fzt session (`tui.NewTreeSession`), renders via GDI `ExtTextOutW`, and runs a proper modal message loop (`GetMessage`/`DispatchMessage`). Uses `DirProvider` for lazy directory loading.
 
 ### Why a visible Win32 window?
 
@@ -15,15 +15,15 @@ COM's `IModalWindow::Show()` must present a visible window owned by the host app
 
 ### COM hook components
 
-- **hook DLL** (`picker-hook.dll`): Loaded into every GUI process via `SetWindowsHookEx`. Hooks `CoCreateInstance` in `combase.dll` to intercept `CLSID_FileOpenDialog`. Returns a COM proxy.
-- **injector** (`picker.exe`): Windows GUI app (no console) that installs the global CBT hook and maintains a message loop. Shows a system tray icon ("fzt picker") with right-click Exit. Killing it removes the hook from new processes.
+- **hook DLL** (`fzt_picker_hook.dll`): Loaded into every GUI process via `SetWindowsHookEx`. Hooks `CoCreateInstance` in `combase.dll` to intercept `CLSID_FileOpenDialog`. Returns a COM proxy.
+- **injector** (`fzt-picker.exe`): Windows GUI app (no console) that installs the global CBT hook and maintains a message loop. Shows a system tray icon ("fzt picker") with right-click Exit. Killing it removes the hook from new processes.
 - **test-trigger** (`test-trigger.exe`): Standalone binary that calls `CoCreateInstance(CLSID_FileOpenDialog)` and `Show()` to test the hook without needing a real app. `--folders` flag sets `FOS_PICKFOLDERS` to test folder-pick mode.
 
 ### Data flow
 
 1. App calls `CoCreateInstance(CLSID_FileOpenDialog)` → hook returns proxy
 2. App configures proxy (SetFileTypes, SetOptions, SetFolder, etc.)
-3. App calls `Show()` → proxy loads `picker_frontend.dll` via `LoadLibrary`, calls `PickFile(filter, foldersOnly, startDir, ownerHwnd)`
+3. App calls `Show()` → proxy loads `fzt_picker_frontend.dll` via `LoadLibrary`, calls `PickFile(filter, foldersOnly, startDir, ownerHwnd)`
 4. Go DLL creates a visible Win32 window owned by the host app's HWND
 5. Go DLL disables the owner window (modal behavior)
 6. Headless fzt session with `DirProvider` loads drive roots (or start directory's contents)
@@ -80,11 +80,11 @@ cargo build
 
 # Go (CGo DLL) — requires GCC on PATH or CC env var
 cd frontend/cgo
-CGO_ENABLED=1 go build -buildmode=c-shared -o picker_frontend.dll .
+CGO_ENABLED=1 go build -buildmode=c-shared -o fzt_picker_frontend.dll .
 
 # Go (standalone frontend for 'explore' at-command)
 cd frontend
-go build -o picker-frontend.exe .
+go build -o fzt-picker-frontend.exe .
 ```
 
 ## Running
@@ -93,19 +93,19 @@ Deployed to `~/bin` via release build. Starts automatically at login via a start
 
 ```sh
 # Standalone folder picker (used by the 'explore' at-command)
-picker-frontend --folders-only
+fzt-picker-frontend --folders-only
 ```
 
 ## Development workflow
 
 The hook DLL loads into every GUI process and can't be replaced while those processes are running. To deploy a new DLL:
-1. Kill `picker.exe`
+1. Kill `fzt-picker.exe`
 2. Rename the old DLL (Windows allows renaming locked files)
 3. Copy the new DLL
-4. Restart `picker.exe`
+4. Restart `fzt-picker.exe`
 5. New processes get the new DLL; old processes keep the old one until they restart
 
-The CGo frontend DLL (`picker_frontend.dll`) also gets locked by processes that have triggered a file dialog. Same rename-and-swap approach.
+The CGo frontend DLL (`fzt_picker_frontend.dll`) also gets locked by processes that have triggered a file dialog. Same rename-and-swap approach.
 
 ## Logging
 
@@ -122,14 +122,14 @@ The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each 
 ### 2026-04-13–14: Architecture overhaul
 
 - **IFileDialogCustomize stub** — Notepad requires this interface. Added no-op implementation for all 27 methods.
-- **Go CGo DLL frontend** — Replaced subprocess model with in-process CGo DLL. The Rust hook loads `picker_frontend.dll` via `LoadLibrary` and calls `PickFile()` directly. No pipe, no subprocess, no stdout parsing.
+- **Go CGo DLL frontend** — Replaced subprocess model with in-process CGo DLL. The Rust hook loads `fzt_picker_frontend.dll` via `LoadLibrary` and calls `PickFile()` directly. No pipe, no subprocess, no stdout parsing.
 - **Visible Win32 window** — Creates a real Win32 window owned by the host app. Runs a proper modal message loop via `GetMessage`/`DispatchMessage`. Solves the "not responding" issue that plagued all previous approaches.
 - **GDI text rendering** — Headless fzt session renders ANSI, parsed to a styled character grid, drawn via `ExtTextOutW` with `ETO_OPAQUE` (no flicker). Italic/bold font variants for hint text and selection indicators. Wide character (Nerd Font icon) handling with surrogate pair support. DEFAULT_CHARSET for broad Unicode coverage.
 - **Shared style system** — Colors from `tui.PaletteRGB`/`tui.ColorToRGB()`, font from `tui.DefaultFontName`/`tui.DefaultFontSize`. No hardcoded palette in picker.
 - **DirProvider lazy loading** — Starts at drive roots, loads children on navigate via `DirProvider`. No more Everything query for the COM path.
 - **Hidden file filtering** — Filters Windows hidden/system files via file attributes.
 - **System tray icon** — Injector is a GUI app (no console). Mining pick icon embedded via `winresource` crate. Right-click to exit.
-- **`explore` at-command** — Added to `at-commands.ps1`, calls `picker-frontend --folders-only` and opens the result in Explorer. Leaf added to at-menu cloud database.
+- **`explore` at-command** — Added to `at-commands.ps1`, calls `fzt-picker-frontend --folders-only` and opens the result in Explorer. Leaf added to at-menu cloud database.
 - **Shared package** — `frontend/picker/` extracts `DirProvider`, `NewConfig`, `HeaderItem` shared by CGo DLL and standalone binary.
 - **Full path selection** — `Session.SelectedItemPath()` walks the tree to return filesystem paths. `ItemFullPath` fixed to handle bare drive letters (`D:` → `D:\`).
 - **Selection indicator** — `▸` (U+25B8) replaced with FA chevron (U+F054, Nerd Font PUA) for GDI compatibility.

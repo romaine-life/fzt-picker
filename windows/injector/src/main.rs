@@ -137,10 +137,10 @@ fn find_hook_dll() -> Result<String, Box<dyn std::error::Error>> {
         .ok_or("no parent dir")?
         .to_path_buf();
 
-    let candidate = exe_dir.join("picker_hook.dll");
+    let candidate = exe_dir.join("fzt_picker_hook.dll");
     if candidate.exists() {
         return Ok(candidate.to_string_lossy().to_string());
     }
 
-    Err(format!("picker_hook.dll not found (looked in {})", exe_dir.display()).into())
+    Err(format!("fzt_picker_hook.dll not found (looked in {})", exe_dir.display()).into())
 }
