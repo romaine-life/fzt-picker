@@ -1,23 +1,9 @@
 name: Release
 
-# Fires on direct pushes to main. Leaf with binary artifacts (Rust + Go
-# frontend module) — no downstream dispatch, build.yml fires with the new
-# tag to build+upload the Windows picker binary.
-#
-# Note: the Go module lives in ./frontend (not repo root), but the release
-# template operates at repo level (git HEAD for tag target), so no
-# go-mod-path input is needed here.
+# Auto-trigger disabled — Claude-driven CI. Run manually via
+# `gh workflow run release.yml -R nelsong6/fzt-picker`.
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - 'frontend/go.mod'
-      - 'frontend/go.sum'
-  # Manual recovery: fire the release path without advancing HEAD. Useful
-  # when a cascade stranded code on main without a tag and we need to
-  # re-release the existing HEAD. The template's skip guard correctly
-  # no-ops if the latest release is already at HEAD.
   workflow_dispatch:
 
 concurrency:

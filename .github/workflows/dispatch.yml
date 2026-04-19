@@ -1,8 +1,9 @@
 name: Dependency Update
 
+# Auto-trigger disabled — Claude-driven CI. Run manually via
+# `gh workflow run dispatch.yml -R nelsong6/fzt-picker`.
 on:
-  repository_dispatch:
-    types: [fzt-updated]
+  workflow_dispatch:
 
 # The called reusable workflow declares contents:write + actions:write. When
 # the caller leaves permissions implicit, the token falls back to the repo's
