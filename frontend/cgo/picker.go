@@ -370,18 +370,9 @@ func wndProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 			handleKeyInput(tcell.KeyRune, ch)
 			return 0
 		}
-		// Ctrl+key combos arrive as control characters
-		switch ch {
-		case 0x03: // Ctrl+C
-			handleKeyInput(tcell.KeyCtrlC, 0)
-			return 0
-		case 0x15: // Ctrl+U
-			handleKeyInput(tcell.KeyCtrlU, 0)
-			return 0
-		case 0x17: // Ctrl+W
-			handleKeyInput(tcell.KeyCtrlW, 0)
-			return 0
-		}
+		// Control-code characters (0x01-0x1F) from Ctrl+letter combos are
+		// ignored — the picker follows the fzt ecosystem's Shift-only
+		// modifier policy (no Ctrl/Alt/Meta bindings anywhere).
 	case WM_PAINT:
 		paintWindow(hwnd)
 		return 0
