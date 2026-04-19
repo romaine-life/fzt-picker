@@ -10,7 +10,7 @@ type Options struct {
 	FoldersOnly bool
 	StartDir    string
 	Provider    core.TreeProvider
-	AcceptNth   []int  // CGo: {1}, standalone: {2}
+	AcceptNth   []int
 	Title       string // optional override; empty uses DefaultTitle
 }
 

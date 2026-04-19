@@ -56,11 +56,20 @@ Both the COM hook path and standalone binary use the same DirProvider and config
 
 The CGo DLL and standalone binary share item loading, DirProvider setup, hidden file filtering, and session config via the `frontend/picker/` package:
 
-- **`frontend/picker/`** — shared: `DirProvider` (wraps `core.DirProvider` with hidden file filtering and folder-only filtering), `NewConfig` (shared tui.Config builder), `HeaderItem`
+- **`frontend/picker/`** — shared: `DirProvider` (wraps `core.DirProvider` with hidden file filtering and folder-only filtering; also sets `Item.Original = fullPath` on each item), `NewConfig` (shared tui.Config builder), `HeaderItem`
 - **`frontend/cgo/`** — CGo DLL: Win32 window + GDI rendering + modal message loop (COM hook path)
 - **`frontend/`** — standalone binary: `tui.Run()` via tcell (shell path, `explore` at-command)
 
 Both paths produce identical fzt sessions. Only the rendering surface differs.
+
+### Selection path output
+
+The two paths get filesystem paths through different mechanisms because fzt core stays filesystem-agnostic (`core.DirProvider` returns items with `Fields=[name]` for directories, not full paths):
+
+- **CGo path** calls `session.SelectedItemPath()` post-select — walks the `ParentIdx` chain via `ItemFullPath` to build the filesystem path at selection time. `AcceptNth: []int{1}` in the shared config is harmless here since CGo doesn't rely on `FormatOutput`'s return value.
+- **Standalone path** relies on `FormatOutput`'s fallback: `AcceptNth` is `nil`, so `FormatOutput` returns `Item.Original`. `picker.DirProvider.LoadChildren` sets `Original = fullPath` on each filtered item; `main.go` sets `Original = "<drive>:\"` on drive-root items (since `core.ListDriveRoots` returns `Fields[0] = "D:"` without the trailing slash).
+
+This keeps fzt core pure — no filesystem-specific logic in `input.go` — while letting both picker paths output real paths.
 
 ## Building
 

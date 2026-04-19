@@ -56,6 +56,17 @@ func main() {
 				startDir = args[i+1]
 				i++
 			}
+		case "--debug-echo":
+			// Emits the given path via the same fmt.Println(strings.TrimSpace(...))
+			// the real picker uses on selection — lets us test the shell-side
+			// capture chain (`$path = picker-frontend ...` → explorer.exe)
+			// without blocking on an interactive pick.
+			if i+1 < len(args) {
+				fmt.Println(strings.TrimSpace(args[i+1]))
+				return
+			}
+			fmt.Fprintln(os.Stderr, "--debug-echo requires a path argument")
+			os.Exit(2)
 		}
 	}
 
@@ -66,6 +77,12 @@ func main() {
 		items = provider.LoadChildren(startDir)
 	} else {
 		items = core.ListDriveRoots()
+		// Drive-root Fields[0] is "D:" (no slash); Original needs the
+		// real filesystem path "D:\" so FormatOutput returns something
+		// explorer.exe can open.
+		for i := range items {
+			items[i].Original = items[i].Fields[0] + `\`
+		}
 	}
 
 	if len(items) == 0 {
@@ -80,7 +97,7 @@ func main() {
 		FoldersOnly: foldersOnly,
 		StartDir:    startDir,
 		Provider:    provider,
-		AcceptNth:   []int{1},
+		AcceptNth:   nil,
 		Title:       title,
 	})
 

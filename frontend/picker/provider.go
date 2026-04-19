@@ -31,6 +31,11 @@ func (p *DirProvider) LoadChildren(parentPath string) []core.Item {
 		if isHiddenFile(fullPath) {
 			continue
 		}
+		// Original is what FormatOutput returns when AcceptNth is empty,
+		// giving the standalone path a real filesystem path on select
+		// (Fields[0] is just the display name). CGo path uses
+		// session.SelectedItemPath post-select and doesn't rely on this.
+		item.Original = fullPath
 		filtered = append(filtered, item)
 	}
 	return filtered
