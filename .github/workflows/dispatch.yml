@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   update:
-    uses: nelsong6/pipeline-templates/.github/workflows/go-dependency-update-template.yml@main
+    uses: romaine-life/pipeline-templates/.github/workflows/go-dependency-update-template.yml@main
     with:
       go-mod-path: frontend
       modules: github.com/nelsong6/fzt github.com/nelsong6/fzt-terminal
