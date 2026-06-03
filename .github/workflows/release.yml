@@ -1,7 +1,7 @@
 name: Release
 
 # Auto-trigger disabled — Claude-driven CI. Run manually via
-# `gh workflow run release.yml -R nelsong6/fzt-picker`.
+# `gh workflow run release.yml -R romaine-life/fzt-picker`.
 
 on:
   workflow_dispatch:
