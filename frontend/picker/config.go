@@ -1,8 +1,8 @@
 package picker
 
 import (
-	"github.com/nelsong6/fzt/core"
-	"github.com/nelsong6/fzt-terminal/tui"
+	"github.com/romaine-life/fzt/core"
+	"github.com/romaine-life/fzt-terminal/tui"
 )
 
 // Options configures the differences between the CGo DLL and standalone binary paths.

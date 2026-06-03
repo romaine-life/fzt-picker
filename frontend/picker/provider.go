@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/nelsong6/fzt/core"
+	"github.com/romaine-life/fzt/core"
 )
 
 // DirProvider wraps core.DirProvider and filters out hidden/system files on Windows.

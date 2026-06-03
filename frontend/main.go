@@ -16,10 +16,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/nelsong6/fzt/core"
-	"github.com/nelsong6/fzt-terminal/tui"
+	"github.com/romaine-life/fzt/core"
+	"github.com/romaine-life/fzt-terminal/tui"
 
-	"github.com/nelsong6/fzt-picker/frontend/picker"
+	"github.com/romaine-life/fzt-picker/frontend/picker"
 )
 
 var (
