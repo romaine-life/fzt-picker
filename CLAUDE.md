@@ -26,23 +26,27 @@ COM's `IModalWindow::Show()` must present a visible window owned by the host app
 3. App calls `Show()` → proxy loads `fzt_picker_frontend.dll` via `LoadLibrary`, calls `PickFile(filter, foldersOnly, startDir, ownerHwnd)`
 4. Go DLL creates a visible Win32 window owned by the host app's HWND
 5. Go DLL disables the owner window (modal behavior)
-6. Headless fzt session with `DirProvider` loads drive roots (or start directory's contents)
-7. Session renders ANSI → parsed to styled character grid → GDI `ExtTextOutW` with `ETO_OPAQUE`
-8. `WM_KEYDOWN`/`WM_CHAR` events feed `session.HandleKey()`, repainting on each change
+6. Headless fzt session with `DirProvider` loads drive roots and, when the app gave a start folder, enters it (`FocusedDir`)
+7. Session renders ANSI → parsed to styled character grid → GDI `ExtTextOutW` into an off-screen bitmap, copied to the window in one `BitBlt`
+8. `WM_KEYDOWN`/`WM_CHAR` events feed `session.HandleKeyResult()`, repainting on each change
 9. `GetMessage`/`DispatchMessage` modal loop keeps the host app responsive
-10. On selection: re-enables owner, destroys window, returns the selected path
+10. On selection: re-enables owner, destroys window, returns the selected item's `Original` (its full path)
 11. App calls `GetResult()` → proxy returns `IShellItem` for the selected path
 
 ### Style system
 
 Picker reads all colors from `tui/style.go` (`tui.PaletteRGB`, `tui.ColorToRGB()`) and font config from `tui.DefaultFontName`/`tui.DefaultFontSize`. The GDI renderer maps tcell styles to GDI calls — this is the only picker-specific rendering code. Style changes in fzt-terminal apply to picker on rebuild.
 
+### Scoped view
+
+The picker shows one folder at a time (fzt's `Config.ScopedView`): entering a folder replaces the list with its contents, and the prompt bar shows the folder's full path. Enter, Right, Space or a click goes into a folder; Left, Backspace on an empty query, or Escape goes up. Search covers the current folder only. A start folder (`--start-dir`, or the app's `SetFolder`) is entered from the drive roots, so going up past it still works. The `:` command palette is off (`HidePalette`).
+
 ### Folder-only mode
 
 When an app sets `FOS_PICKFOLDERS` (e.g. Electron's `dialog.showOpenDialog({ properties: ['openDirectory'] })`), the COM proxy detects the flag in `SetOptions` and passes `foldersOnly=true` to the frontend. This triggers two behaviors:
 
 - **DirProvider filtering**: `picker.DirProvider` skips non-directory items in `LoadChildren`, so only folders appear in the tree.
-- **Folder selection**: fzt's `Config.FoldersOnly` changes the Enter key behavior — Enter on a folder you're already scoped into returns `"select:"` instead of no-op, giving a two-press gesture (Enter to navigate in, Enter again to confirm selection).
+- **Folder selection**: fzt's `Config.FoldersOnly` with the scoped view makes Enter with nothing under the cursor pick the folder you are in, giving a two-press gesture (Enter to go in, Enter again to pick it). The prompt hint says so.
 
 Both the COM hook path and standalone binary use the same DirProvider and config, so behavior is identical. The standalone binary accepts `--folders-only` to enable this mode.
 
@@ -56,7 +60,7 @@ Both the COM hook path and standalone binary use the same DirProvider and config
 
 The CGo DLL and standalone binary share item loading, DirProvider setup, hidden file filtering, and session config via the `frontend/picker/` package:
 
-- **`frontend/picker/`** — shared: `DirProvider` (wraps `core.DirProvider` with hidden file filtering and folder-only filtering; also sets `Item.Original = fullPath` on each item), `NewConfig` (shared tui.Config builder), `HeaderItem`
+- **`frontend/picker/`** — shared: `DirProvider` (wraps `core.DirProvider` with hidden file filtering and folder-only filtering; also sets `Item.Original = fullPath` on each item), `DriveRoots` (drive roots with `Original = "D:\"`), `NewConfig` (shared tui.Config builder), `HeaderItem`
 - **`frontend/cgo/`** — CGo DLL: Win32 window + GDI rendering + modal message loop (COM hook path)
 - **`frontend/`** — standalone binary: `tui.Run()` via tcell (shell path, `explore` at-command)
 
@@ -64,12 +68,7 @@ Both paths produce identical fzt sessions. Only the rendering surface differs.
 
 ### Selection path output
 
-The two paths get filesystem paths through different mechanisms because fzt core stays filesystem-agnostic (`core.DirProvider` returns items with `Fields=[name]` for directories, not full paths):
-
-- **CGo path** calls `session.SelectedItemPath()` post-select — walks the `ParentIdx` chain via `ItemFullPath` to build the filesystem path at selection time. `AcceptNth: []int{1}` in the shared config is harmless here since CGo doesn't rely on `FormatOutput`'s return value.
-- **Standalone path** relies on `FormatOutput`'s fallback: `AcceptNth` is `nil`, so `FormatOutput` returns `Item.Original`. `picker.DirProvider.LoadChildren` sets `Original = fullPath` on each filtered item; `main.go` sets `Original = "<drive>:\"` on drive-root items (since `core.ListDriveRoots` returns `Fields[0] = "D:"` without the trailing slash).
-
-This keeps fzt core pure — no filesystem-specific logic in `input.go` — while letting both picker paths output real paths.
+Both paths return the selected item's `Item.Original`, its full filesystem path: `picker.DirProvider.LoadChildren` sets it on every item and `picker.DriveRoots` on the drive roots (whose `Fields[0]` is the bare `D:`). The standalone path gets it from `FormatOutput` (no `AcceptNth`); the CGo path from `HandleKeyResult`'s item. fzt core stays filesystem-agnostic.
 
 ## Building
 
@@ -89,7 +88,7 @@ go build -o fzt-picker-frontend.exe .
 
 ## Running
 
-Deployed to `~/bin` via release build. Starts automatically at login via a startup folder shortcut (created by `init.ps1`). Shows as a system tray icon — right-click to exit.
+`publish.ps1` publishes the latest GitHub release (all four Windows binaries in one folder) to `\\NelsonNAS\tools\fzt-picker\<tag>\`; cut a release first (`gh workflow run release.yml -R romaine-life/fzt-picker`). The home shell puts the current version's folder on PATH, so `fzt-picker-frontend` resolves to it. `at\fzt-picker.ps1` in shell-config-profile-home restarts the tray injector on the current version, and the Startup-folder shortcut runs it at sign-in. Shows as a system tray icon — right-click to exit.
 
 ```sh
 # Standalone folder picker (used by the 'explore' at-command)
@@ -98,20 +97,21 @@ fzt-picker-frontend --folders-only
 
 ## Development workflow
 
-The hook DLL loads into every GUI process and can't be replaced while those processes are running. To deploy a new DLL:
-1. Kill `fzt-picker.exe`
-2. Rename the old DLL (Windows allows renaming locked files)
-3. Copy the new DLL
-4. Restart `fzt-picker.exe`
-5. New processes get the new DLL; old processes keep the old one until they restart
-
-The CGo frontend DLL (`fzt_picker_frontend.dll`) also gets locked by processes that have triggered a file dialog. Same rename-and-swap approach.
+The hook DLL loads into every GUI process and the frontend DLL into every process that opened a dialog, so neither can be replaced while those run. Each published version is its own folder, so nothing is replaced: publish, then run `at\fzt-picker.ps1` to restart the injector on the new version. New processes get the new DLLs; old processes keep the old ones until they restart.
 
 ## Logging
 
 The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each log line is append + close to handle concurrent writes from multiple hooked processes.
 
 ## Changelog
+
+### 2026-10-29: Scoped view, flicker, published to the NAS
+
+- **Scoped view** — one folder at a time with its full path in the prompt bar, instead of expanding folders in place (their contents could land below the window). `:` palette off. Engine and renderer changes in fzt and fzt-terminal.
+- **Start folder** — the standalone binary starts at the drive roots and enters `--start-dir`, so you can still go up from it; the popup now honors the app's start folder too (it always opened at the drive roots before).
+- **Flicker** — the terminal picker repainted the whole screen five times a second while idle; fzt-terminal v0.1.101 made that a diffed redraw and this bumps to it. The popup drew each run of text straight to the window; it now draws off-screen and copies once.
+- **Selection** — both paths return `Item.Original`; `AcceptNth` and `SelectedItemPath` are no longer used.
+- **Publishing** — `publish.ps1` to `\\NelsonNAS\tools\fzt-picker`, replacing the hand-installed copy in `~\bin`.
 
 ### 2026-04-05: Initial implementation
 
@@ -124,7 +124,7 @@ The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each 
 - **IFileDialogCustomize stub** — Notepad requires this interface. Added no-op implementation for all 27 methods.
 - **Go CGo DLL frontend** — Replaced subprocess model with in-process CGo DLL. The Rust hook loads `fzt_picker_frontend.dll` via `LoadLibrary` and calls `PickFile()` directly. No pipe, no subprocess, no stdout parsing.
 - **Visible Win32 window** — Creates a real Win32 window owned by the host app. Runs a proper modal message loop via `GetMessage`/`DispatchMessage`. Solves the "not responding" issue that plagued all previous approaches.
-- **GDI text rendering** — Headless fzt session renders ANSI, parsed to a styled character grid, drawn via `ExtTextOutW` with `ETO_OPAQUE` (no flicker). Italic/bold font variants for hint text and selection indicators. Wide character (Nerd Font icon) handling with surrogate pair support. DEFAULT_CHARSET for broad Unicode coverage.
+- **GDI text rendering** — Headless fzt session renders ANSI, parsed to a styled character grid, drawn via `ExtTextOutW` with `ETO_OPAQUE`. Italic/bold font variants for hint text and selection indicators. Wide character (Nerd Font icon) handling with surrogate pair support. DEFAULT_CHARSET for broad Unicode coverage.
 - **Shared style system** — Colors from `tui.PaletteRGB`/`tui.ColorToRGB()`, font from `tui.DefaultFontName`/`tui.DefaultFontSize`. No hardcoded palette in picker.
 - **DirProvider lazy loading** — Starts at drive roots, loads children on navigate via `DirProvider`. No more Everything query for the COM path.
 - **Hidden file filtering** — Filters Windows hidden/system files via file attributes.

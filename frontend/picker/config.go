@@ -10,7 +10,6 @@ type Options struct {
 	FoldersOnly bool
 	StartDir    string
 	Provider    core.TreeProvider
-	AcceptNth   []int
 	Title       string // optional override; empty uses DefaultTitle
 }
 
@@ -35,9 +34,10 @@ func NewConfig(opts Options) tui.Config {
 		DepthPenalty: 5,
 		HeaderLines:  1,
 		Nth:          []int{1},
-		AcceptNth:    opts.AcceptNth,
 		Title:        title,
 		TreeMode:     true,
+		ScopedView:   true,
+		HidePalette:  true,
 		FoldersOnly:  opts.FoldersOnly,
 		FrontendName: "picker",
 		Provider:     opts.Provider,

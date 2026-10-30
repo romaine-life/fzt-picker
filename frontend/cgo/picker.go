@@ -60,6 +60,10 @@ var (
 	fillRect           = user32.NewProc("FillRect")
 	createSolidBrush   = gdi32.NewProc("CreateSolidBrush")
 	getTextMetrics     = gdi32.NewProc("GetTextMetricsW")
+	createCompatDC     = gdi32.NewProc("CreateCompatibleDC")
+	createCompatBitmap = gdi32.NewProc("CreateCompatibleBitmap")
+	bitBlt             = gdi32.NewProc("BitBlt")
+	deleteDC           = gdi32.NewProc("DeleteDC")
 )
 
 // Win32 constants
@@ -99,6 +103,7 @@ const (
 	SM_CYSCREEN         = 1
 	SWP_NOZORDER        = 0x0004
 	TIMER_CURSOR        = 1
+	SRCCOPY             = 0x00CC0020
 )
 
 type MSG struct {
@@ -210,18 +215,13 @@ func runPicker(foldersOnly bool, startDir string, hwndOwner uintptr) string {
 	}
 	pickerHwnd = hwnd
 
-	// Build initial items — always start at drive roots
 	provider := picker.NewDirProvider(foldersOnly)
-	items := core.ListDriveRoots()
-
-	headerItem := picker.HeaderItem("Name")
-	items = append([]core.Item{headerItem}, items...)
+	items := append([]core.Item{picker.HeaderItem("Name")}, picker.DriveRoots()...)
 
 	cfg := picker.NewConfig(picker.Options{
 		FoldersOnly: foldersOnly,
 		StartDir:    startDir,
 		Provider:    provider,
-		AcceptNth:   []int{1},
 		Title:       title,
 	})
 
@@ -299,14 +299,15 @@ func isShiftDown() bool {
 }
 
 func handleKeyInput(key tcell.Key, ch rune) {
-	frame, action := pickerSession.HandleKey(key, ch, isShiftDown())
+	frame, result := pickerSession.HandleKeyResult(key, ch, isShiftDown())
+	action := result.Action
 	pickerMu.Lock()
 	pickerFrame = frame
 	pickerGrid = parseANSIGrid(frame.ANSI, gridCols, gridRows)
 	pickerMu.Unlock()
 
 	if strings.HasPrefix(action, "select:") {
-		pickerResult = pickerSession.SelectedItemPath()
+		pickerResult = result.Item.Original
 		postQuitMessageFn.Call(0)
 		return
 	}
@@ -523,11 +524,34 @@ var (
 
 const ETO_OPAQUE = 0x0002
 
+// paintWindow composes the frame off-screen and copies it to the window in
+// one blit, so the window never shows a half-drawn frame.
 func paintWindow(hwnd uintptr) {
 	var ps PAINTSTRUCT
 	hdc, _, _ := beginPaint.Call(hwnd, uintptr(unsafe.Pointer(&ps)))
+	defer endPaint.Call(hwnd, uintptr(unsafe.Pointer(&ps)))
 
-	// Select font
+	var rc RECT
+	getClientRect.Call(hwnd, uintptr(unsafe.Pointer(&rc)))
+	w, h := uintptr(rc.Right), uintptr(rc.Bottom)
+	memDC, _, _ := createCompatDC.Call(hdc)
+	bmp, _, _ := createCompatBitmap.Call(hdc, w, h)
+	oldBmp, _, _ := selectObject.Call(memDC, bmp)
+
+	drawFrame(memDC, &rc)
+	bitBlt.Call(hdc, 0, 0, w, h, memDC, 0, 0, SRCCOPY)
+
+	selectObject.Call(memDC, oldBmp)
+	deleteObject.Call(bmp)
+	deleteDC.Call(memDC)
+}
+
+// drawFrame draws the current grid onto hdc, filling the whole client rect
+// first so the strip past the last full cell is background too.
+func drawFrame(hdc uintptr, client *RECT) {
+	setBkColor.Call(hdc, uintptr(colorToBGR(tcell.ColorDefault, tui.BaseBgRGB)))
+	extTextOutW.Call(hdc, 0, 0, ETO_OPAQUE, uintptr(unsafe.Pointer(client)), 0, 0, 0)
+
 	oldFont, _, _ := selectObject.Call(hdc, font)
 
 	pickerMu.Lock()
@@ -644,16 +668,9 @@ func paintWindow(hwnd uintptr) {
 				)
 			}
 		}
-	} else {
-		// No grid yet — fill with background
-		var rc RECT
-		getClientRect.Call(hwnd, uintptr(unsafe.Pointer(&rc)))
-		setBkColor.Call(hdc, uintptr(colorToBGR(tcell.ColorDefault, tui.BaseBgRGB)))
-		extTextOutW.Call(hdc, 0, 0, ETO_OPAQUE, uintptr(unsafe.Pointer(&rc)), 0, 0, 0)
 	}
 
 	selectObject.Call(hdc, oldFont)
-	endPaint.Call(hwnd, uintptr(unsafe.Pointer(&ps)))
 }
 
 // StyledCell holds a character and its style from the ANSI grid
