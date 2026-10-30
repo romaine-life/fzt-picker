@@ -86,15 +86,15 @@ func main() {
 
 	bringToFront()
 
-	result, err := tui.Run(items, cfg)
+	pick, err := tui.Run(items, cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "fzt-picker-frontend: %v\n", err)
 		os.Exit(1)
 	}
 
-	if result == "" {
+	if pick.Kind == "cancel" {
 		os.Exit(130)
 	}
 
-	fmt.Println(strings.TrimSpace(result))
+	fmt.Println(strings.TrimSpace(pick.Output))
 }
