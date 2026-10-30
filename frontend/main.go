@@ -1,7 +1,7 @@
 // fzt-picker-frontend — fzt-powered file picker TUI.
 //
 // Standalone frontend for the picker. Uses DirProvider for lazy tree browsing
-// with hidden/system file filtering. Starts from drive roots or a specified directory.
+// with hidden/system file filtering. Starts from drive roots, scoped into --start-dir if given.
 //
 // Usage:
 //
@@ -70,34 +70,17 @@ func main() {
 		}
 	}
 
-	provider := picker.NewDirProvider(foldersOnly)
-
-	var items []core.Item
-	if startDir != "" {
-		items = provider.LoadChildren(startDir)
-	} else {
-		items = core.ListDriveRoots()
-		// Drive-root Fields[0] is "D:" (no slash); Original needs the
-		// real filesystem path "D:\" so FormatOutput returns something
-		// explorer.exe can open.
-		for i := range items {
-			items[i].Original = items[i].Fields[0] + `\`
-		}
-	}
-
-	if len(items) == 0 {
+	roots := picker.DriveRoots()
+	if len(roots) == 0 {
 		fmt.Fprintln(os.Stderr, "fzt-picker-frontend: no items found")
 		os.Exit(1)
 	}
-
-	headerItem := picker.HeaderItem("Name")
-	items = append([]core.Item{headerItem}, items...)
+	items := append([]core.Item{picker.HeaderItem("Name")}, roots...)
 
 	cfg := picker.NewConfig(picker.Options{
 		FoldersOnly: foldersOnly,
 		StartDir:    startDir,
-		Provider:    provider,
-		AcceptNth:   nil,
+		Provider:    picker.NewDirProvider(foldersOnly),
 		Title:       title,
 	})
 
