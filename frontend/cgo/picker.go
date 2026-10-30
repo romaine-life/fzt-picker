@@ -222,7 +222,6 @@ func runPicker(foldersOnly bool, startDir string, hwndOwner uintptr) string {
 		FoldersOnly: foldersOnly,
 		StartDir:    startDir,
 		Provider:    provider,
-		Title:       title,
 	})
 
 	pickerSession = tui.NewTreeSession(items, cfg, gridCols, gridRows)

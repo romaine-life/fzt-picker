@@ -6,12 +6,12 @@ github.com/lucasb-eyer/go-colorful v1.3.0 h1:2/yBRLdWBZKrf7gB40FoiKfAWYQ0lqNcbuQ
 github.com/lucasb-eyer/go-colorful v1.3.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
 github.com/rivo/uniseg v0.4.7/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=
-github.com/romaine-life/fzt v0.2.76 h1:F7wLjPJTu9+/FeIaZ8yeiZE1HYvLcMDw8RAUjR2nBGo=
-github.com/romaine-life/fzt v0.2.76/go.mod h1:+/4sSnR4iFd8ADQWCwJublmXt9lPzlvweFJJKEbTxLw=
+github.com/romaine-life/fzt v0.2.77 h1:M1+4IHnKQZ/dqx2YVOpVzWoJbTOvXTgO7+vkif1LRYw=
+github.com/romaine-life/fzt v0.2.77/go.mod h1:+/4sSnR4iFd8ADQWCwJublmXt9lPzlvweFJJKEbTxLw=
 github.com/romaine-life/fzt-frontend v0.1.34 h1:CGCLJv86meizuaK6KXkrmSqkaMmfgiwmVP8inbmVMJA=
 github.com/romaine-life/fzt-frontend v0.1.34/go.mod h1:MCQ7uATeZ8te/3Pwv7K98qpD/0d6jKhQVSvF3VqWv40=
-github.com/romaine-life/fzt-terminal v0.1.102 h1:fta7vUTdCuGmvPqmwfQccVhugO7W3KC5M/6ncNt0pA0=
-github.com/romaine-life/fzt-terminal v0.1.102/go.mod h1:kY+qdl3XVaDXvnpSABa5oJ4doM6m/if2zlGomcdwZrg=
+github.com/romaine-life/fzt-terminal v0.1.103 h1:XwDgJhCe+qqlXPJ8y7EnvdIpgy8ILligULe+sH8A5a8=
+github.com/romaine-life/fzt-terminal v0.1.103/go.mod h1:P3WQ4Aa7J5BGpePJNEf6mjS7XpUgob38XpbQ+y1fC8o=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=

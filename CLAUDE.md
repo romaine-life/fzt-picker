@@ -39,14 +39,14 @@ Picker reads all colors from `tui/style.go` (`tui.PaletteRGB`, `tui.ColorToRGB()
 
 ### Scoped view
 
-The picker shows one folder at a time (fzt's `Config.ScopedView`): entering a folder replaces the list with its contents, and the prompt bar shows the folder's full path. Enter, Right, Space or a click goes into a folder; Left, Backspace on an empty query, or Escape goes up. Search covers the current folder only. A start folder (`--start-dir`, or the app's `SetFolder`) is entered from the drive roots, so going up past it still works. The `:` command palette is off (`HidePalette`).
+The picker shows one folder at a time (fzt's `Config.ScopedView`): entering a folder replaces the list with its contents, and the prompt bar shows the folder's full path. Right, Space, Tab or a click goes into a folder (Enter too, in a file picker); Left, Backspace on an empty query, or Escape goes up. Search covers the current folder only. A start folder (`--start-dir`, or the app's `SetFolder`) is entered from the drive roots, so going up past it still works. The `:` command palette is off (`HidePalette`).
 
 ### Folder-only mode
 
 When an app sets `FOS_PICKFOLDERS` (e.g. Electron's `dialog.showOpenDialog({ properties: ['openDirectory'] })`), the COM proxy detects the flag in `SetOptions` and passes `foldersOnly=true` to the frontend. This triggers two behaviors:
 
 - **DirProvider filtering**: `picker.DirProvider` skips non-directory items in `LoadChildren`, so only folders appear in the tree.
-- **Folder selection**: fzt's `Config.FoldersOnly` with the scoped view makes Enter with nothing under the cursor pick the folder you are in, giving a two-press gesture (Enter to go in, Enter again to pick it). The prompt hint says so.
+- **Folder selection**: with fzt's `Config.FoldersOnly` and the scoped view, Enter picks a folder instead of entering it: the highlighted one, else the top match of what you typed, else the folder you are in. Right, Space, Tab or a click goes in. The border title starts with the mode (`󰉋 Folder picker`, or `File picker` for files), followed by the caller's `--title`, so the different Enter is never a surprise.
 
 Both the COM hook path and standalone binary use the same DirProvider and config, so behavior is identical. The standalone binary accepts `--folders-only` to enable this mode.
 
@@ -104,6 +104,10 @@ The hook DLL loads into every GUI process and the frontend DLL into every proces
 The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each log line is append + close to handle concurrent writes from multiple hooked processes.
 
 ## Changelog
+
+### 2026-10-29: Enter picks the folder
+
+- In a folder picker Enter picks the highlighted, typed or current folder; Right, Space, Tab or a click goes in. Before, picking meant entering a folder and pressing Enter again with nothing highlighted. The title names the mode. fzt v0.2.77, fzt-terminal v0.1.103; OpenProject FZT-51.
 
 ### 2026-10-29: Scoped view, flicker, published to the NAS
 
