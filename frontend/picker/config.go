@@ -10,10 +10,10 @@ type Options struct {
 	FoldersOnly bool
 	StartDir    string
 	Provider    core.TreeProvider
-	Title       string // optional override; empty uses DefaultTitle
+	Title       string // optional purpose shown after the mode, e.g. "Launch Claude in"
 }
 
-// DefaultTitle returns "Pick a file" or "Pick a folder".
+// DefaultTitle returns "Pick a file" or "Pick a folder", the popup window's caption.
 func DefaultTitle(foldersOnly bool) string {
 	if foldersOnly {
 		return "Pick a folder"
@@ -21,11 +21,20 @@ func DefaultTitle(foldersOnly bool) string {
 	return "Pick a file"
 }
 
+// ModeTitle names what the picker returns, with its icon, so a folder picker
+// (where Enter picks a folder) never looks like a file picker.
+func ModeTitle(foldersOnly bool) string {
+	if foldersOnly {
+		return "\U000F024B Folder picker"
+	}
+	return "\uF15B File picker"
+}
+
 // NewConfig builds the shared tui.Config for picker sessions.
 func NewConfig(opts Options) tui.Config {
-	title := opts.Title
-	if title == "" {
-		title = DefaultTitle(opts.FoldersOnly)
+	title := ModeTitle(opts.FoldersOnly)
+	if opts.Title != "" {
+		title += " \u00b7 " + opts.Title
 	}
 	return tui.Config{
 		Layout:       "reverse",
