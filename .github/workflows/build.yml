@@ -2,9 +2,12 @@ name: Build
 
 # Called by the dep-update template AFTER it cuts a release. Builds the
 # Rust COM hook + injector + Go CGo DLL + standalone frontend for the
-# given tag and uploads all assets to the existing release.
+# given tag and uploads all assets to the existing release. Every pull
+# request runs the same build without the upload, so a release is never
+# the first build of a change.
 
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       tag:
@@ -62,6 +65,11 @@ jobs:
           CC: C:\msys64\ucrt64\bin\gcc.exe
         run: go build -buildmode=c-shared -o fzt_picker_frontend.dll ./cgo
 
+      - name: Vet
+        shell: bash
+        working-directory: frontend
+        run: go vet . ./picker
+
       - name: Build standalone frontend
         shell: bash
         working-directory: frontend
@@ -71,6 +79,7 @@ jobs:
 
       # ── Upload to existing release ─────────────────────────────
       - name: Upload assets to release
+        if: github.event_name == 'workflow_dispatch'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
