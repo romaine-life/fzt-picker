@@ -25,6 +25,32 @@ func TestDriveRootsOriginalIsOpenableRoot(t *testing.T) {
 	}
 }
 
+// The work Mac's /d is a symlink; the folder picker must show it and go in.
+func TestFoldersOnlyKeepsLinkedFolders(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "real", "repos"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(dir, "real"), filepath.Join(dir, "d")); err != nil {
+		t.Skipf("symlinks unavailable here: %v", err)
+	}
+
+	p := NewDirProvider(true)
+	var linked bool
+	for _, it := range p.LoadChildren(dir) {
+		if it.Fields[0] == "d" && it.HasChildren {
+			linked = true
+		}
+	}
+	if !linked {
+		t.Fatal("folder reached through a link is missing from a folders-only listing")
+	}
+	inside := p.LoadChildren(filepath.Join(dir, "d"))
+	if len(inside) != 1 || inside[0].Original != filepath.Join(dir, "d", "repos") {
+		t.Fatalf("inside the link: got %v, want d/repos", inside)
+	}
+}
+
 func TestLoadChildrenFoldersOnlyAndFullPaths(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o755); err != nil {
