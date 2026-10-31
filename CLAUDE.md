@@ -93,7 +93,7 @@ CI (`build.yml`) builds both on every pull request; its `build-macos` job runs v
 
 ## Running
 
-`publish.ps1` publishes the latest GitHub release (all four Windows binaries in one folder) to `\\NelsonNAS\tools\fzt-picker\<tag>\`; cut a release first (`gh workflow run release.yml -R romaine-life/fzt-picker`). The home shell puts the current version's folder on PATH, so `fzt-picker-frontend` resolves to it. `at\fzt-picker.ps1` in shell-config-profile-home restarts the tray injector on the current version, and the Startup-folder shortcut runs it at sign-in. Shows as a system tray icon — right-click to exit.
+`publish.ps1` publishes the latest GitHub release (all four Windows binaries in one folder) to `\\NelsonNAS\tools\fzt-picker\<tag>\`; cut a release first (`gh workflow run release.yml -R romaine-life/fzt-picker`). The home shell puts the current version's folder on PATH, so `fzt-picker-frontend` resolves to it. The `fzt-picker` command ([romaine-life/at](https://github.com/romaine-life/at) `commands/fzt-picker.ps1`) restarts the tray injector on the current version; the Startup-folder shortcut that home-sync (shell-config-profile-home `machine/apply.ps1`) writes runs it at sign-in. Shows as a system tray icon — right-click to exit.
 
 ```sh
 # Standalone folder picker (used by the 'explore' at-command)
@@ -102,7 +102,7 @@ fzt-picker-frontend --folders-only
 
 ## Development workflow
 
-The hook DLL loads into every GUI process and the frontend DLL into every process that opened a dialog, so neither can be replaced while those run. Each published version is its own folder, so nothing is replaced: publish, then run `at\fzt-picker.ps1` to restart the injector on the new version. New processes get the new DLLs; old processes keep the old ones until they restart.
+The hook DLL loads into every GUI process and the frontend DLL into every process that opened a dialog, so neither can be replaced while those run. Each published version is its own folder, so nothing is replaced: publish, then run `fzt-picker` to restart the injector on the new version. New processes get the new DLLs; old processes keep the old ones until they restart.
 
 ## Logging
 
