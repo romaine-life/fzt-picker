@@ -110,6 +110,10 @@ The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each 
 
 ## Changelog
 
+### 2026-10-30: Folders reached through a link
+
+- A symlinked or junctioned folder now shows in the picker and can be entered; before, it read as a file and a folder picker hid it. The work Mac's `/d` is one, so `--start-dir /d/repos` could not get there. fzt v0.2.83; OpenProject TMUX-21.
+
 ### 2026-10-30: macOS build of the standalone frontend
 
 - The standalone frontend builds for macOS (arm64), released as `fzt-picker-frontend-darwin-arm64`, so the work Mac's `launch-claude` can use the real folder picker. Windows-only code moved to `_windows.go` files; macOS hides dot names and `UF_HIDDEN`. Drive roots' `Original` no longer gains a stray `\` where the root already ends in a separator (`/`). OpenProject TMUX-21.
