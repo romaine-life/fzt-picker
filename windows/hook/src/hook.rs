@@ -1,8 +1,10 @@
 use std::ffi::c_void;
 
 use retour::static_detour;
-use windows::core::GUID;
+use windows::core::{GUID, PCWSTR};
+use windows::Win32::Foundation::{CloseHandle, GetLastError, ERROR_ALREADY_EXISTS, HANDLE};
 use windows::Win32::System::LibraryLoader::{GetModuleHandleA, GetProcAddress};
+use windows::Win32::System::Threading::{CreateMutexW, GetCurrentProcessId};
 use windows_core::HRESULT;
 
 use crate::proxy;
@@ -38,30 +40,68 @@ static_detour! {
     ) -> HRESULT;
 }
 
-/// Install the CoCreateInstance detour. Called from DllMain on DLL_PROCESS_ATTACH.
+/// Every release's copy of this DLL, from every path it ran from, can be loaded in
+/// one process at once: a copy stays loaded after its injector exits. Each copy
+/// that detoured CoCreateInstance patched over the one before, so when one
+/// unloaded, a call went through the others into its freed code (FZT-61: at
+/// Terminal crashed in `fzt_picker_hook.dll_unloaded` as fzt-picker restarted).
+/// So one copy at a time owns the detour: the one holding this process's named
+/// mutex. The others take it over from HookProc once the owner has unloaded.
+static mut OWNER: HANDLE = HANDLE(std::ptr::null_mut());
+/// Set once installing failed, so HookProc doesn't retry it on every event.
+static mut GAVE_UP: bool = false;
+
+/// Install the CoCreateInstance detour if no other copy of this DLL owns it. Called
+/// from DllMain on DLL_PROCESS_ATTACH and from HookProc.
 ///
 /// # Safety
-/// Must be called under the loader lock (DllMain context). Only does memory patching
-/// via retour — no LoadLibrary, no thread creation, no COM calls.
+/// May run under the loader lock (DllMain context). Only creates a mutex and does
+/// memory patching via retour — no LoadLibrary, no thread creation, no COM calls.
 pub unsafe fn install() -> Result<(), Box<dyn std::error::Error>> {
-    let module = GetModuleHandleA(windows::core::s!("combase.dll"))?;
-    let proc = GetProcAddress(module, windows::core::s!("CoCreateInstance"))
-        .ok_or("CoCreateInstance not found in combase.dll")?;
-    let original: FnCoCreateInstance = std::mem::transmute(proc);
+    if !OWNER.is_invalid() || GAVE_UP {
+        return Ok(());
+    }
+    let name: Vec<u16> = format!("Local\\fzt-picker-detour-{}", GetCurrentProcessId())
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+    let claim = CreateMutexW(None, false, PCWSTR(name.as_ptr()))?;
+    if GetLastError() == ERROR_ALREADY_EXISTS {
+        let _ = CloseHandle(claim);
+        return Ok(());
+    }
 
-    CoCreateInstanceDetour
-        .initialize(original, |rclsid, punk_outer, cls_context, riid, ppv| unsafe {
-            hooked_co_create_instance(rclsid, punk_outer, cls_context, riid, ppv)
-        })?
-        .enable()?;
-
+    let detour = || -> Result<(), Box<dyn std::error::Error>> {
+        let module = GetModuleHandleA(windows::core::s!("combase.dll"))?;
+        let proc = GetProcAddress(module, windows::core::s!("CoCreateInstance"))
+            .ok_or("CoCreateInstance not found in combase.dll")?;
+        let original: FnCoCreateInstance = std::mem::transmute(proc);
+        CoCreateInstanceDetour
+            .initialize(original, |rclsid, punk_outer, cls_context, riid, ppv| unsafe {
+                hooked_co_create_instance(rclsid, punk_outer, cls_context, riid, ppv)
+            })?
+            .enable()?;
+        Ok(())
+    };
+    if let Err(e) = detour() {
+        let _ = CloseHandle(claim);
+        GAVE_UP = true;
+        return Err(e);
+    }
+    OWNER = claim;
     crate::log("picker: CoCreateInstance hook installed");
     Ok(())
 }
 
+/// Remove the detour if this copy owns it, and give up the claim.
 pub fn uninstall() {
     unsafe {
+        if OWNER.is_invalid() {
+            return;
+        }
         let _ = CoCreateInstanceDetour.disable();
+        let _ = CloseHandle(OWNER);
+        OWNER = HANDLE(std::ptr::null_mut());
     }
 }
 
