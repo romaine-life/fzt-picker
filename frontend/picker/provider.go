@@ -2,12 +2,11 @@ package picker
 
 import (
 	"path/filepath"
-	"syscall"
 
 	"github.com/romaine-life/fzt/core"
 )
 
-// DirProvider wraps core.DirProvider and filters out hidden/system files on Windows.
+// DirProvider wraps core.DirProvider and filters out hidden files (hidden_<os>.go).
 // When FoldersOnly is set, files are excluded entirely.
 type DirProvider struct {
 	inner       *core.DirProvider
@@ -37,15 +36,4 @@ func (p *DirProvider) LoadChildren(parentPath string) []core.Item {
 		filtered = append(filtered, item)
 	}
 	return filtered
-}
-
-func isHiddenFile(path string) bool {
-	pathW, _ := syscall.UTF16PtrFromString(path)
-	attrs, err := syscall.GetFileAttributes(pathW)
-	if err != nil {
-		return true // can't read attributes — likely a protected system folder
-	}
-	const FILE_ATTRIBUTE_HIDDEN = 0x2
-	const FILE_ATTRIBUTE_SYSTEM = 0x4
-	return attrs&(FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM) != 0
 }

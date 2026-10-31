@@ -2,7 +2,8 @@ name: Build
 
 # Called by the dep-update template AFTER it cuts a release. Builds the
 # Rust COM hook + injector + Go CGo DLL + standalone frontend for the
-# given tag and uploads all assets to the existing release. Every pull
+# given tag, plus the standalone frontend for macOS (arm64), and uploads
+# all assets to the existing release. Every pull
 # request runs the same build without the upload, so a release is never
 # the first build of a change.
 
@@ -70,6 +71,11 @@ jobs:
         working-directory: frontend
         run: go vet . ./picker
 
+      - name: Test
+        shell: bash
+        working-directory: frontend
+        run: go test ./picker
+
       - name: Build standalone frontend
         shell: bash
         working-directory: frontend
@@ -90,5 +96,45 @@ jobs:
             windows/target/release/test-trigger.exe \
             frontend/fzt_picker_frontend.dll \
             frontend/fzt-picker-frontend.exe \
+            --clobber \
+            -R ${{ github.repository }}
+
+  # The standalone frontend for the work Mac (launch-claude in a tmux pane).
+  # The COM hook and popup DLL are Windows-only.
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: frontend/go.mod
+          cache-dependency-path: frontend/go.sum
+
+      - name: Vet
+        working-directory: frontend
+        run: go vet . ./picker
+
+      - name: Test
+        working-directory: frontend
+        run: go test ./picker
+
+      - name: Build standalone frontend
+        working-directory: frontend
+        env:
+          CGO_ENABLED: "0"
+          GOOS: darwin
+          GOARCH: arm64
+        run: go build -o fzt-picker-frontend-darwin-arm64 .
+
+      - name: Upload asset to release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ inputs.tag }} \
+            frontend/fzt-picker-frontend-darwin-arm64 \
             --clobber \
             -R ${{ github.repository }}

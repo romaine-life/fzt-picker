@@ -14,27 +14,12 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"syscall"
 
 	"github.com/romaine-life/fzt/core"
 	"github.com/romaine-life/fzt-terminal/tui"
 
 	"github.com/romaine-life/fzt-picker/frontend/picker"
 )
-
-var (
-	kernel32            = syscall.NewLazyDLL("kernel32.dll")
-	user32              = syscall.NewLazyDLL("user32.dll")
-	getConsoleWindow    = kernel32.NewProc("GetConsoleWindow")
-	setForegroundWindow = user32.NewProc("SetForegroundWindow")
-)
-
-func bringToFront() {
-	hwnd, _, _ := getConsoleWindow.Call()
-	if hwnd != 0 {
-		setForegroundWindow.Call(hwnd)
-	}
-}
 
 func main() {
 	foldersOnly := false
