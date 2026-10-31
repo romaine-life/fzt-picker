@@ -60,9 +60,9 @@ Both the COM hook path and standalone binary use the same DirProvider and config
 
 The CGo DLL and standalone binary share item loading, DirProvider setup, hidden file filtering, and session config via the `frontend/picker/` package:
 
-- **`frontend/picker/`** — shared: `DirProvider` (wraps `core.DirProvider` with hidden file filtering and folder-only filtering; also sets `Item.Original = fullPath` on each item), `DriveRoots` (drive roots with `Original = "D:\"`), `NewConfig` (shared tui.Config builder), `HeaderItem`
+- **`frontend/picker/`** — shared: `DirProvider` (wraps `core.DirProvider` with hidden file filtering and folder-only filtering; also sets `Item.Original = fullPath` on each item), `DriveRoots` (drive roots with `Original = "D:\"`, or `/` on macOS), `NewConfig` (shared tui.Config builder), `HeaderItem`. Hidden-file rules are per OS: `hidden_windows.go` (hidden/system attributes), `hidden_darwin.go` (dot names and the `UF_HIDDEN` flag, as Finder hides them)
 - **`frontend/cgo/`** — CGo DLL: Win32 window + GDI rendering + modal message loop (COM hook path)
-- **`frontend/`** — standalone binary: `tui.Run()` via tcell (shell path, `explore` at-command)
+- **`frontend/`** — standalone binary: `tui.Run()` via tcell (shell path, `explore` at-command). The only part that builds on macOS: the work Mac's `launch-claude` runs it in a tmux pane. `front_windows.go` brings the console window forward; `front_darwin.go` is a no-op.
 
 Both paths produce identical fzt sessions. Only the rendering surface differs.
 
@@ -84,7 +84,12 @@ CGO_ENABLED=1 go build -buildmode=c-shared -o fzt_picker_frontend.dll .
 # Go (standalone frontend for 'explore' at-command)
 cd frontend
 go build -o fzt-picker-frontend.exe .
+
+# Go (standalone frontend for the work Mac)
+GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o fzt-picker-frontend-darwin-arm64 .
 ```
+
+CI (`build.yml`) builds both on every pull request; its `build-macos` job runs vet and `go test ./picker` natively on `macos-latest` and adds `fzt-picker-frontend-darwin-arm64` to each release.
 
 ## Running
 
@@ -104,6 +109,10 @@ The hook DLL loads into every GUI process and the frontend DLL into every proces
 The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each log line is append + close to handle concurrent writes from multiple hooked processes.
 
 ## Changelog
+
+### 2026-10-30: macOS build of the standalone frontend
+
+- The standalone frontend builds for macOS (arm64), released as `fzt-picker-frontend-darwin-arm64`, so the work Mac's `launch-claude` can use the real folder picker. Windows-only code moved to `_windows.go` files; macOS hides dot names and `UF_HIDDEN`. Drive roots' `Original` no longer gains a stray `\` where the root already ends in a separator (`/`). OpenProject TMUX-21.
 
 ### 2026-10-29: Enter picks the folder
 
