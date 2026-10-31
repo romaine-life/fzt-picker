@@ -18,10 +18,14 @@ pub unsafe extern "system" fn SetHookHandle(handle: HHOOK) {
     HOOK_HANDLE = handle;
 }
 
-/// CBT hook callback required by SetWindowsHookEx. Does nothing — the real work
-/// happens in DllMain where we install the CoCreateInstance detour.
+/// CBT hook callback required by SetWindowsHookEx. The detour goes in from DllMain;
+/// here a copy that found another copy owning it takes over once that one has
+/// unloaded (hook::install).
 #[no_mangle]
 pub unsafe extern "system" fn HookProc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    if let Err(e) = hook::install() {
+        log(&format!("picker: hook install failed: {e}"));
+    }
     CallNextHookEx(HOOK_HANDLE, code, wparam, lparam)
 }
 

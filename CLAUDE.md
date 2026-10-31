@@ -15,7 +15,7 @@ COM's `IModalWindow::Show()` must present a visible window owned by the host app
 
 ### COM hook components
 
-- **hook DLL** (`fzt_picker_hook.dll`): Loaded into every GUI process via `SetWindowsHookEx`. Hooks `CoCreateInstance` in `combase.dll` to intercept `CLSID_FileOpenDialog`. Returns a COM proxy.
+- **hook DLL** (`fzt_picker_hook.dll`): Loaded into every GUI process via `SetWindowsHookEx`. Hooks `CoCreateInstance` in `combase.dll` to intercept `CLSID_FileOpenDialog`. Returns a COM proxy. A copy stays loaded after its injector exits, so one process can hold several releases' copies; only the copy holding the process's `Local\fzt-picker-detour-<pid>` mutex patches, and another takes over from `HookProc` once it unloads. Copies that each patched on top of the last crashed the host when one unloaded (FZT-61).
 - **injector** (`fzt-picker.exe`): Windows GUI app (no console) that installs the global CBT hook and maintains a message loop. Shows a system tray icon ("fzt picker") with right-click Exit. Killing it removes the hook from new processes.
 - **test-trigger** (`test-trigger.exe`): Standalone binary that calls `CoCreateInstance(CLSID_FileOpenDialog)` and `Show()` to test the hook without needing a real app. `--folders` flag sets `FOS_PICKFOLDERS` to test folder-pick mode.
 
