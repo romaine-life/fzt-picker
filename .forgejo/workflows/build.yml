@@ -1,0 +1,215 @@
+name: Build
+
+# Builds the Rust COM hook, injector and test-trigger and the Go CGo DLL and
+# standalone frontend on every pull request and main push. Run by
+# release.yml (through the pipeline-templates release template) with a `tag`
+# after it cuts a release: that run checks out the tag and uploads the assets
+# to the existing Forgejo release, so a release is never the first build of a
+# change.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build artifacts for (and upload to)'
+        required: true
+        type: string
+
+jobs:
+  # upstairspc, host mode: the job uses the machine's Rust (rustup), Go,
+  # WinLibs gcc, Visual Studio Build Tools and Windows SDK signtool.
+  windows:
+    runs-on: windows-latest
+    # The runner's account has an interactive pwsh profile (the home shell),
+    # which a step must not load; act adds no .ps1 to a custom shell's script.
+    # On the runner's PATH, bash is WSL's launcher, so no step uses bash.
+    defaults:
+      run:
+        shell: pwsh -NoLogo -NoProfile -NonInteractive -Command "$ErrorActionPreference = 'Stop'; . ([scriptblock]::Create([IO.File]::ReadAllText('{0}'))); if (Test-Path variable:LASTEXITCODE) { exit $LASTEXITCODE }"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      # windows/rust-toolchain.toml selects nightly; installing it leaves the
+      # machine's default toolchain alone. Cargo's target folder persists in
+      # the runner's folder in place of a cache (the runner runs one job at a
+      # time).
+      - name: Toolchain
+        run: |
+          $target = "$env:USERPROFILE\.forgejo-runner\cargo-target\fzt-picker"
+          New-Item -ItemType Directory -Force $target | Out-Null
+          "CARGO_TARGET_DIR=$target" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          rustup toolchain install nightly --profile minimal
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          go version
+          gcc --version
+
+      # ── Rust (COM hook + injector + test-trigger) ──────────────
+      - name: Build Rust binaries
+        working-directory: windows
+        run: |
+          rustc --version
+          cargo build --release
+
+      # ── Go (CGo DLL + standalone frontend) ─────────────────────
+      - name: Build CGo DLL
+        working-directory: frontend
+        env:
+          CGO_ENABLED: "1"
+          CC: gcc
+        run: go build -buildmode=c-shared -o fzt_picker_frontend.dll ./cgo
+
+      - name: Vet
+        working-directory: frontend
+        run: go vet . ./picker
+
+      - name: Test
+        working-directory: frontend
+        run: go test ./picker
+
+      - name: Build standalone frontend
+        working-directory: frontend
+        env:
+          CGO_ENABLED: "0"
+        run: go build -o fzt-picker-frontend.exe .
+
+      - name: Collect
+        run: |
+          Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory dist | Out-Null
+          foreach ($f in 'fzt_picker_hook.dll', 'fzt-picker.exe', 'test-trigger.exe') {
+            Copy-Item "$env:CARGO_TARGET_DIR\release\$f" dist
+          }
+          Copy-Item frontend/fzt_picker_frontend.dll, frontend/fzt-picker-frontend.exe dist
+          Get-ChildItem dist | Format-Table Name, Length
+
+      # The hook loads fzt_picker_frontend.dll into every process that opens a
+      # file dialog, so no binary may need a MinGW runtime DLL (libwinpthread,
+      # libgcc_s) beside it.
+      - name: Runtime imports
+        run: |
+          foreach ($f in Get-ChildItem dist) {
+            $out = objdump -p $f.FullName
+            if ($LASTEXITCODE) { throw "objdump failed on $($f.Name)" }
+            $dlls = @($out | Select-String 'DLL Name: (\S+)' | ForEach-Object { $_.Matches[0].Groups[1].Value })
+            if (-not $dlls) { throw "found no imports in $($f.Name)" }
+            "$($f.Name): $($dlls -join ', ')"
+            $bad = @($dlls | Where-Object { $_ -like 'lib*.dll' })
+            if ($bad) { throw "$($f.Name) needs $($bad -join ', ')" }
+          }
+
+      # Defender quarantined an unsigned tmux build as Program:Win32/Contebrew.A!ml
+      # and passed the same build signed (TMUX-30). The certificate is at
+      # Terminal's, which every home PC trusts.
+      - name: Sign
+        env:
+          PFX: ${{ secrets.AT_TERMINAL_PFX }}
+          PFX_PASSWORD: ${{ secrets.AT_TERMINAL_PFX_PASSWORD }}
+        run: |
+          if (-not $env:PFX) { throw 'AT_TERMINAL_PFX is not set' }
+          $signtool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe' | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signtool) { throw 'signtool not found' }
+          [IO.File]::WriteAllBytes("$PWD\cert.pfx", [Convert]::FromBase64String($env:PFX))
+          try {
+            & $signtool.FullName sign /fd SHA256 /f cert.pfx /p $env:PFX_PASSWORD (Get-ChildItem dist).FullName
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          } finally { Remove-Item cert.pfx }
+
+      # ── Upload to the existing release ─────────────────────────
+      - name: Upload assets to release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          API: ${{ github.server_url }}/api/v1/repos/${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          $h = @{ Authorization = "token $env:TOKEN" }
+          $release = Invoke-RestMethod "$env:API/releases/tags/$env:TAG" -Headers $h
+          foreach ($f in Get-ChildItem dist) {
+            foreach ($a in @($release.assets | Where-Object name -eq $f.Name)) {
+              Invoke-RestMethod -Method Delete "$env:API/releases/$($release.id)/assets/$($a.id)" -Headers $h | Out-Null
+            }
+            Invoke-RestMethod -Method Post "$env:API/releases/$($release.id)/assets?name=$($f.Name)" -Headers $h -Form @{ attachment = $f } | Out-Null
+            "uploaded $($f.Name) to $env:TAG"
+          }
+
+  # The standalone frontend for the work Mac (launch-claude in a tmux pane).
+  # It is built and tested on GitHub from the push mirror
+  # (.github/workflows/macos.yml); this job waits for that run on the same
+  # commit and passes only if it passed, and on a release adds its build to
+  # the Forgejo release.
+  macos:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait for the GitHub macOS run
+        id: mac
+        env:
+          GH_TOKEN: ${{ secrets.GH_MIRROR_TOKEN }}
+          FJ: ${{ secrets.GITHUB_TOKEN }}
+          API: ${{ github.server_url }}/api/v1/repos/${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ -n "$TAG" ]; then
+            SHA=$(curl -fsS -H "Authorization: token $FJ" "$API/tags/$TAG" | jq -r .commit.sha)
+          fi
+          api="https://api.github.com/repos/romaine-life/fzt-picker/actions/workflows/macos.yml/runs?head_sha=$SHA&per_page=1"
+          start=$(date +%s)
+          while :; do
+            r=$(curl -fsS --retry 3 -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$api")
+            elapsed=$(( $(date +%s) - start ))
+            if [ "$(jq '.total_count' <<<"$r")" -gt 0 ]; then
+              status=$(jq -r '.workflow_runs[0].status' <<<"$r")
+              conclusion=$(jq -r '.workflow_runs[0].conclusion' <<<"$r")
+              url=$(jq -r '.workflow_runs[0].html_url' <<<"$r")
+              if [ "$status" = completed ]; then
+                echo "macOS run $url: $conclusion"
+                if [ "$conclusion" = success ]; then
+                  echo "run-id=$(jq -r '.workflow_runs[0].id' <<<"$r")" >> "$GITHUB_OUTPUT"
+                  exit 0
+                fi
+                echo "::error::the macOS run on GitHub ended $conclusion: $url"
+                exit 1
+              fi
+              if [ "$elapsed" -ge 2700 ]; then
+                echo "::error::the macOS run on GitHub did not finish in 45 minutes: $url"
+                exit 1
+              fi
+              echo "macOS run $url: $status"
+            elif [ "$elapsed" -ge 900 ]; then
+              echo "::error::no macOS run on GitHub for $SHA after 15 minutes: the push mirror did not deliver it"
+              exit 1
+            fi
+            sleep 30
+          done
+
+      - name: Add the macOS build to the release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GH_MIRROR_TOKEN }}
+          FJ: ${{ secrets.GITHUB_TOKEN }}
+          API: ${{ github.server_url }}/api/v1/repos/${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+          RUN_ID: ${{ steps.mac.outputs.run-id }}
+        run: |
+          name=fzt-picker-frontend-darwin-arm64
+          url=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/romaine-life/fzt-picker/actions/runs/$RUN_ID/artifacts?name=$name" \
+            | jq -r '.artifacts[0].archive_download_url // empty')
+          [ -n "$url" ] || { echo "::error::macOS run $RUN_ID has no $name artifact"; exit 1; }
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -o mac.zip "$url"
+          unzip -o mac.zip -d mac
+          [ -f "mac/$name" ] || { echo "::error::the $name artifact holds no $name"; exit 1; }
+          release=$(curl -fsS -H "Authorization: token $FJ" "$API/releases/tags/$TAG")
+          id=$(jq -r .id <<<"$release")
+          for aid in $(jq -r --arg n "$name" '.assets[] | select(.name == $n) | .id' <<<"$release"); do
+            curl -fsS -o /dev/null -X DELETE -H "Authorization: token $FJ" "$API/releases/$id/assets/$aid"
+          done
+          curl -fsS -o /dev/null -H "Authorization: token $FJ" -F "attachment=@mac/$name" "$API/releases/$id/assets?name=$name"
+          echo "uploaded $name to $TAG"

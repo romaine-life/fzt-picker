@@ -1,0 +1,61 @@
+# The standalone frontend for the work Mac (launch-claude in a tmux pane).
+#
+# The rest of CI runs on Forgejo (.forgejo/workflows/build.yml). This runs on
+# GitHub from Forgejo's push mirror; Forgejo's macos job waits for it and adds
+# its build to the Forgejo release. A release tag also gets a GitHub release
+# holding the macOS build, for machines that can't reach Forgejo.
+name: macOS
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: frontend/go.mod
+          cache-dependency-path: frontend/go.sum
+
+      - name: Vet
+        working-directory: frontend
+        run: go vet . ./picker
+
+      - name: Test
+        working-directory: frontend
+        run: go test ./picker
+
+      - name: Build standalone frontend
+        working-directory: frontend
+        env:
+          CGO_ENABLED: "0"
+          GOOS: darwin
+          GOARCH: arm64
+        run: go build -o fzt-picker-frontend-darwin-arm64 .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fzt-picker-frontend-darwin-arm64
+          path: frontend/fzt-picker-frontend-darwin-arm64
+          if-no-files-found: error
+
+      - name: Add to the GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: romaine-life/fzt-picker
+        run: |
+          gh release view "$GITHUB_REF_NAME" --repo "$REPO" > /dev/null 2>&1 ||
+            gh release create "$GITHUB_REF_NAME" --repo "$REPO" --verify-tag --title "$GITHUB_REF_NAME" \
+              --notes "macOS build. The Windows binaries are released on Forgejo: https://forgejo.romaine.life/romaine-life/fzt-picker/releases/tag/$GITHUB_REF_NAME"
+          gh release upload "$GITHUB_REF_NAME" frontend/fzt-picker-frontend-darwin-arm64 --clobber --repo "$REPO"
