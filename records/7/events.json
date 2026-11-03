@@ -93,5 +93,36 @@
     "node_id": "HRDE_lADOR7WrXc8AAAABbFsNms8AAAAIEaw6Wg",
     "performed_via_github_app": null,
     "url": "https://api.github.com/repos/romaine-life/fzt-picker/issues/events/34656238170"
+  },
+  {
+    "actor": {
+      "avatar_url": "https://avatars.githubusercontent.com/u/18473267?v=4",
+      "events_url": "https://api.github.com/users/nelsong6/events{/privacy}",
+      "followers_url": "https://api.github.com/users/nelsong6/followers",
+      "following_url": "https://api.github.com/users/nelsong6/following{/other_user}",
+      "gists_url": "https://api.github.com/users/nelsong6/gists{/gist_id}",
+      "gravatar_id": "",
+      "html_url": "https://github.com/nelsong6",
+      "id": 18473267,
+      "login": "nelsong6",
+      "node_id": "MDQ6VXNlcjE4NDczMjY3",
+      "organizations_url": "https://api.github.com/users/nelsong6/orgs",
+      "received_events_url": "https://api.github.com/users/nelsong6/received_events",
+      "repos_url": "https://api.github.com/users/nelsong6/repos",
+      "site_admin": false,
+      "starred_url": "https://api.github.com/users/nelsong6/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/nelsong6/subscriptions",
+      "type": "User",
+      "url": "https://api.github.com/users/nelsong6",
+      "user_view_type": "public"
+    },
+    "commit_id": "af20214480a0e38ef80019d2ee2f18487f7ac816",
+    "commit_url": "https://api.github.com/repos/romaine-life/fzt-picker/commits/af20214480a0e38ef80019d2ee2f18487f7ac816",
+    "created_at": "2026-11-03T20:19:09Z",
+    "event": "referenced",
+    "id": 35061279505,
+    "node_id": "REFE_lADOR7WrXc8AAAABbFsNms8AAAAIKdCrEQ",
+    "performed_via_github_app": null,
+    "url": "https://api.github.com/repos/romaine-life/fzt-picker/issues/events/35061279505"
   }
 ]
