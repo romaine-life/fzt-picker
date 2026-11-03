@@ -21,3 +21,4 @@ jobs:
       # Leaf with binary artifacts (Rust + Go): release, no downstream
       # dispatch, then build.yml with the new tag builds and uploads.
       artifact-build-workflow: build.yml
+      draft-release: true

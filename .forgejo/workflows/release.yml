@@ -8,6 +8,9 @@ name: Release
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 concurrency:
   group: release-tag
   cancel-in-progress: false
@@ -17,4 +20,6 @@ jobs:
     uses: romaine-life/pipeline-templates/.forgejo/workflows/release-and-dispatch-template.yml@main
     secrets: inherit
     with:
+      # build.yml starts home-sync only after Windows and Mac assets are uploaded.
       artifact-build-workflow: build.yml
+      draft-release: true

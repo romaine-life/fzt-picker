@@ -18,6 +18,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   # upstairspc, host mode: the job uses the machine's Rust (rustup), Go,
   # WinLibs gcc, Visual Studio Build Tools and Windows SDK signtool.
@@ -128,6 +131,7 @@ jobs:
         run: |
           $h = @{ Authorization = "token $env:TOKEN" }
           $release = Invoke-RestMethod "$env:API/releases/tags/$env:TAG" -Headers $h
+          if (-not $release.draft) { throw 'Refusing to replace assets of a published release' }
           foreach ($f in Get-ChildItem dist) {
             foreach ($a in @($release.assets | Where-Object name -eq $f.Name)) {
               Invoke-RestMethod -Method Delete "$env:API/releases/$($release.id)/assets/$($a.id)" -Headers $h | Out-Null
@@ -205,9 +209,17 @@ jobs:
           unzip -o mac.zip -d mac
           [ -f "mac/$name" ] || { echo "::error::the $name artifact holds no $name"; exit 1; }
           release=$(curl -fsS -H "Authorization: token $FJ" "$API/releases/tags/$TAG")
+          [ "$(jq -r .draft <<<"$release")" = true ] || { echo "::error::refusing to replace published release assets"; exit 1; }
           id=$(jq -r .id <<<"$release")
           for aid in $(jq -r --arg n "$name" '.assets[] | select(.name == $n) | .id' <<<"$release"); do
             curl -fsS -o /dev/null -X DELETE -H "Authorization: token $FJ" "$API/releases/$id/assets/$aid"
           done
           curl -fsS -o /dev/null -H "Authorization: token $FJ" -F "attachment=@mac/$name" "$API/releases/$id/assets?name=$name"
           echo "uploaded $name to $TAG"
+
+  home-sync:
+    needs: [windows, macos]
+    uses: romaine-life/pipeline-templates/.forgejo/workflows/home-sync.yml@main
+    secrets: inherit
+    with:
+      release-tag: ${{ inputs.tag }}
