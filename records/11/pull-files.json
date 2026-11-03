@@ -1,0 +1,14 @@
+[
+  {
+    "additions": 2,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/ada7959d1ac83e4a1dc0c691f19d984386ff94aa/CLAUDE.md",
+    "changes": 4,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/CLAUDE.md?ref=ada7959d1ac83e4a1dc0c691f19d984386ff94aa",
+    "deletions": 2,
+    "filename": "CLAUDE.md",
+    "patch": "@@ -93,7 +93,7 @@ CI (`build.yml`) builds both on every pull request; its `build-macos` job runs v\n \n ## Running\n \n-`publish.ps1` publishes the latest GitHub release (all four Windows binaries in one folder) to `\\\\NelsonNAS\\tools\\fzt-picker\\\u003ctag\u003e\\`; cut a release first (`gh workflow run release.yml -R romaine-life/fzt-picker`). The home shell puts the current version's folder on PATH, so `fzt-picker-frontend` resolves to it. `at\\fzt-picker.ps1` in shell-config-profile-home restarts the tray injector on the current version, and the Startup-folder shortcut runs it at sign-in. Shows as a system tray icon — right-click to exit.\n+`publish.ps1` publishes the latest GitHub release (all four Windows binaries in one folder) to `\\\\NelsonNAS\\tools\\fzt-picker\\\u003ctag\u003e\\`; cut a release first (`gh workflow run release.yml -R romaine-life/fzt-picker`). The home shell puts the current version's folder on PATH, so `fzt-picker-frontend` resolves to it. The `fzt-picker` command ([romaine-life/at](https://github.com/romaine-life/at) `commands/fzt-picker.ps1`) restarts the tray injector on the current version; the Startup-folder shortcut that home-sync (shell-config-profile-home `machine/apply.ps1`) writes runs it at sign-in. Shows as a system tray icon — right-click to exit.\n \n ```sh\n # Standalone folder picker (used by the 'explore' at-command)\n@@ -102,7 +102,7 @@ fzt-picker-frontend --folders-only\n \n ## Development workflow\n \n-The hook DLL loads into every GUI process and the frontend DLL into every process that opened a dialog, so neither can be replaced while those run. Each published version is its own folder, so nothing is replaced: publish, then run `at\\fzt-picker.ps1` to restart the injector on the new version. New processes get the new DLLs; old processes keep the old ones until they restart.\n+The hook DLL loads into every GUI process and the frontend DLL into every process that opened a dialog, so neither can be replaced while those run. Each published version is its own folder, so nothing is replaced: publish, then run `fzt-picker` to restart the injector on the new version. New processes get the new DLLs; old processes keep the old ones until they restart.\n \n ## Logging\n ",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/ada7959d1ac83e4a1dc0c691f19d984386ff94aa/CLAUDE.md",
+    "sha": "f94ffe1d5c2dbf3ed451fedf731f15c546d6ef76",
+    "status": "modified"
+  }
+]

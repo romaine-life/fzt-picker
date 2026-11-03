@@ -1,0 +1,80 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 694581d..9079645 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -110,6 +110,10 @@ The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each
+ 
+ ## Changelog
+ 
++### 2026-10-30: Folders reached through a link
++
++- A symlinked or junctioned folder now shows in the picker and can be entered; before, it read as a file and a folder picker hid it. The work Mac's `/d` is one, so `--start-dir /d/repos` could not get there. fzt v0.2.83; OpenProject TMUX-21.
++
+ ### 2026-10-30: macOS build of the standalone frontend
+ 
+ - The standalone frontend builds for macOS (arm64), released as `fzt-picker-frontend-darwin-arm64`, so the work Mac's `launch-claude` can use the real folder picker. Windows-only code moved to `_windows.go` files; macOS hides dot names and `UF_HIDDEN`. Drive roots' `Original` no longer gains a stray `\` where the root already ends in a separator (`/`). OpenProject TMUX-21.
+diff --git a/frontend/go.mod b/frontend/go.mod
+index 0291f4c..cda6588 100644
+--- a/frontend/go.mod
++++ b/frontend/go.mod
+@@ -4,7 +4,7 @@ go 1.26.1
+ 
+ require (
+ 	github.com/gdamore/tcell/v2 v2.13.10
+-	github.com/romaine-life/fzt v0.2.78
++	github.com/romaine-life/fzt v0.2.83
+ 	github.com/romaine-life/fzt-terminal v0.1.109
+ )
+ 
+diff --git a/frontend/go.sum b/frontend/go.sum
+index 2d560a8..e51212e 100644
+--- a/frontend/go.sum
++++ b/frontend/go.sum
+@@ -6,8 +6,8 @@ github.com/lucasb-eyer/go-colorful v1.3.0 h1:2/yBRLdWBZKrf7gB40FoiKfAWYQ0lqNcbuQ
+ github.com/lucasb-eyer/go-colorful v1.3.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
+ github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
+ github.com/rivo/uniseg v0.4.7/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=
+-github.com/romaine-life/fzt v0.2.78 h1:Sp+ooiDB2Aqi0k28NB10u+aar81YryFPMYt0MBWF5AA=
+-github.com/romaine-life/fzt v0.2.78/go.mod h1:+/4sSnR4iFd8ADQWCwJublmXt9lPzlvweFJJKEbTxLw=
++github.com/romaine-life/fzt v0.2.83 h1:DFqw2zD52FzJmTIXkhWI0V/QS4Y15WzY6iz1pTCRAgk=
++github.com/romaine-life/fzt v0.2.83/go.mod h1:+/4sSnR4iFd8ADQWCwJublmXt9lPzlvweFJJKEbTxLw=
+ github.com/romaine-life/fzt-frontend v0.1.35 h1:lZvvt4MpUD8MFhBWFmQn/0RdYLy4cHI8fjXtTf/nCaI=
+ github.com/romaine-life/fzt-frontend v0.1.35/go.mod h1:XFnCbkSV+bBdki1Y69RYmQ5TD4EJYSVY5jmMcEi9HAo=
+ github.com/romaine-life/fzt-terminal v0.1.109 h1:58/hApAqr4Lp7t1PdluYh+dPv6Q9vU0JHHkpG6A79x0=
+diff --git a/frontend/picker/items_test.go b/frontend/picker/items_test.go
+index fbfbfed..d505264 100644
+--- a/frontend/picker/items_test.go
++++ b/frontend/picker/items_test.go
+@@ -25,6 +25,32 @@ func TestDriveRootsOriginalIsOpenableRoot(t *testing.T) {
+ 	}
+ }
+ 
++// The work Mac's /d is a symlink; the folder picker must show it and go in.
++func TestFoldersOnlyKeepsLinkedFolders(t *testing.T) {
++	dir := t.TempDir()
++	if err := os.MkdirAll(filepath.Join(dir, "real", "repos"), 0o755); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.Symlink(filepath.Join(dir, "real"), filepath.Join(dir, "d")); err != nil {
++		t.Skipf("symlinks unavailable here: %v", err)
++	}
++
++	p := NewDirProvider(true)
++	var linked bool
++	for _, it := range p.LoadChildren(dir) {
++		if it.Fields[0] == "d" && it.HasChildren {
++			linked = true
++		}
++	}
++	if !linked {
++		t.Fatal("folder reached through a link is missing from a folders-only listing")
++	}
++	inside := p.LoadChildren(filepath.Join(dir, "d"))
++	if len(inside) != 1 || inside[0].Original != filepath.Join(dir, "d", "repos") {
++		t.Fatalf("inside the link: got %v, want d/repos", inside)
++	}
++}
++
+ func TestLoadChildrenFoldersOnlyAndFullPaths(t *testing.T) {
+ 	dir := t.TempDir()
+ 	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o755); err != nil {

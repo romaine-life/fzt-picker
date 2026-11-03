@@ -1,0 +1,25 @@
+diff --git a/.github/workflows/dispatch.yml b/.github/workflows/dispatch.yml
+index f0e74e5..9b4942b 100644
+--- a/.github/workflows/dispatch.yml
++++ b/.github/workflows/dispatch.yml
+@@ -23,7 +23,7 @@ concurrency:
+ 
+ jobs:
+   update:
+-    uses: nelsong6/pipeline-templates/.github/workflows/go-dependency-update-template.yml@main
++    uses: romaine-life/pipeline-templates/.github/workflows/go-dependency-update-template.yml@main
+     with:
+       go-mod-path: frontend
+       modules: github.com/nelsong6/fzt github.com/nelsong6/fzt-terminal
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index 79eb867..bea7e0e 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -17,6 +17,6 @@ permissions:
+ 
+ jobs:
+   release:
+-    uses: nelsong6/pipeline-templates/.github/workflows/release-and-dispatch-template.yml@main
++    uses: romaine-life/pipeline-templates/.github/workflows/release-and-dispatch-template.yml@main
+     with:
+       artifact-build-workflow: build.yml

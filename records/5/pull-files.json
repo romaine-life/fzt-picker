@@ -1,0 +1,14 @@
+[
+  {
+    "additions": 10,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/684e3ce28dd82183afa76a30699fbb56cf6c9a2f/.github%2Fworkflows%2Fbuild.yml",
+    "changes": 11,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/.github%2Fworkflows%2Fbuild.yml?ref=684e3ce28dd82183afa76a30699fbb56cf6c9a2f",
+    "deletions": 1,
+    "filename": ".github/workflows/build.yml",
+    "patch": "@@ -2,9 +2,12 @@ name: Build\n \n # Called by the dep-update template AFTER it cuts a release. Builds the\n # Rust COM hook + injector + Go CGo DLL + standalone frontend for the\n-# given tag and uploads all assets to the existing release.\n+# given tag and uploads all assets to the existing release. Every pull\n+# request runs the same build without the upload, so a release is never\n+# the first build of a change.\n \n on:\n+  pull_request:\n   workflow_dispatch:\n     inputs:\n       tag:\n@@ -62,6 +65,11 @@ jobs:\n           CC: C:\\msys64\\ucrt64\\bin\\gcc.exe\n         run: go build -buildmode=c-shared -o fzt_picker_frontend.dll ./cgo\n \n+      - name: Vet\n+        shell: bash\n+        working-directory: frontend\n+        run: go vet . ./picker\n+\n       - name: Build standalone frontend\n         shell: bash\n         working-directory: frontend\n@@ -71,6 +79,7 @@ jobs:\n \n       # ── Upload to existing release ─────────────────────────────\n       - name: Upload assets to release\n+        if: github.event_name == 'workflow_dispatch'\n         shell: bash\n         env:\n           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/684e3ce28dd82183afa76a30699fbb56cf6c9a2f/.github%2Fworkflows%2Fbuild.yml",
+    "sha": "e898c85dc2ec6e47676263aa7c6725e0e2b2444b",
+    "status": "modified"
+  }
+]

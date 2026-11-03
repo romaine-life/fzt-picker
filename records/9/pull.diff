@@ -1,0 +1,385 @@
+diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+index e898c85..4c101eb 100644
+--- a/.github/workflows/build.yml
++++ b/.github/workflows/build.yml
+@@ -2,7 +2,8 @@ name: Build
+ 
+ # Called by the dep-update template AFTER it cuts a release. Builds the
+ # Rust COM hook + injector + Go CGo DLL + standalone frontend for the
+-# given tag and uploads all assets to the existing release. Every pull
++# given tag, plus the standalone frontend for macOS (arm64), and uploads
++# all assets to the existing release. Every pull
+ # request runs the same build without the upload, so a release is never
+ # the first build of a change.
+ 
+@@ -70,6 +71,11 @@ jobs:
+         working-directory: frontend
+         run: go vet . ./picker
+ 
++      - name: Test
++        shell: bash
++        working-directory: frontend
++        run: go test ./picker
++
+       - name: Build standalone frontend
+         shell: bash
+         working-directory: frontend
+@@ -92,3 +98,43 @@ jobs:
+             frontend/fzt-picker-frontend.exe \
+             --clobber \
+             -R ${{ github.repository }}
++
++  # The standalone frontend for the work Mac (launch-claude in a tmux pane).
++  # The COM hook and popup DLL are Windows-only.
++  build-macos:
++    runs-on: macos-latest
++    steps:
++      - uses: actions/checkout@v4
++        with:
++          ref: ${{ inputs.tag }}
++
++      - uses: actions/setup-go@v5
++        with:
++          go-version-file: frontend/go.mod
++          cache-dependency-path: frontend/go.sum
++
++      - name: Vet
++        working-directory: frontend
++        run: go vet . ./picker
++
++      - name: Test
++        working-directory: frontend
++        run: go test ./picker
++
++      - name: Build standalone frontend
++        working-directory: frontend
++        env:
++          CGO_ENABLED: "0"
++          GOOS: darwin
++          GOARCH: arm64
++        run: go build -o fzt-picker-frontend-darwin-arm64 .
++
++      - name: Upload asset to release
++        if: github.event_name == 'workflow_dispatch'
++        env:
++          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
++        run: |
++          gh release upload ${{ inputs.tag }} \
++            frontend/fzt-picker-frontend-darwin-arm64 \
++            --clobber \
++            -R ${{ github.repository }}
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 37d3c36..694581d 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -60,9 +60,9 @@ Both the COM hook path and standalone binary use the same DirProvider and config
+ 
+ The CGo DLL and standalone binary share item loading, DirProvider setup, hidden file filtering, and session config via the `frontend/picker/` package:
+ 
+-- **`frontend/picker/`** — shared: `DirProvider` (wraps `core.DirProvider` with hidden file filtering and folder-only filtering; also sets `Item.Original = fullPath` on each item), `DriveRoots` (drive roots with `Original = "D:\"`), `NewConfig` (shared tui.Config builder), `HeaderItem`
++- **`frontend/picker/`** — shared: `DirProvider` (wraps `core.DirProvider` with hidden file filtering and folder-only filtering; also sets `Item.Original = fullPath` on each item), `DriveRoots` (drive roots with `Original = "D:\"`, or `/` on macOS), `NewConfig` (shared tui.Config builder), `HeaderItem`. Hidden-file rules are per OS: `hidden_windows.go` (hidden/system attributes), `hidden_darwin.go` (dot names and the `UF_HIDDEN` flag, as Finder hides them)
+ - **`frontend/cgo/`** — CGo DLL: Win32 window + GDI rendering + modal message loop (COM hook path)
+-- **`frontend/`** — standalone binary: `tui.Run()` via tcell (shell path, `explore` at-command)
++- **`frontend/`** — standalone binary: `tui.Run()` via tcell (shell path, `explore` at-command). The only part that builds on macOS: the work Mac's `launch-claude` runs it in a tmux pane. `front_windows.go` brings the console window forward; `front_darwin.go` is a no-op.
+ 
+ Both paths produce identical fzt sessions. Only the rendering surface differs.
+ 
+@@ -84,8 +84,13 @@ CGO_ENABLED=1 go build -buildmode=c-shared -o fzt_picker_frontend.dll .
+ # Go (standalone frontend for 'explore' at-command)
+ cd frontend
+ go build -o fzt-picker-frontend.exe .
++
++# Go (standalone frontend for the work Mac)
++GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o fzt-picker-frontend-darwin-arm64 .
+ ```
+ 
++CI (`build.yml`) builds both on every pull request; its `build-macos` job runs vet and `go test ./picker` natively on `macos-latest` and adds `fzt-picker-frontend-darwin-arm64` to each release.
++
+ ## Running
+ 
+ `publish.ps1` publishes the latest GitHub release (all four Windows binaries in one folder) to `\\NelsonNAS\tools\fzt-picker\<tag>\`; cut a release first (`gh workflow run release.yml -R romaine-life/fzt-picker`). The home shell puts the current version's folder on PATH, so `fzt-picker-frontend` resolves to it. `at\fzt-picker.ps1` in shell-config-profile-home restarts the tray injector on the current version, and the Startup-folder shortcut runs it at sign-in. Shows as a system tray icon — right-click to exit.
+@@ -105,6 +110,10 @@ The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each
+ 
+ ## Changelog
+ 
++### 2026-10-30: macOS build of the standalone frontend
++
++- The standalone frontend builds for macOS (arm64), released as `fzt-picker-frontend-darwin-arm64`, so the work Mac's `launch-claude` can use the real folder picker. Windows-only code moved to `_windows.go` files; macOS hides dot names and `UF_HIDDEN`. Drive roots' `Original` no longer gains a stray `\` where the root already ends in a separator (`/`). OpenProject TMUX-21.
++
+ ### 2026-10-29: Enter picks the folder
+ 
+ - In a folder picker Enter picks the highlighted, typed or current folder; Right, Space, Tab or a click goes in. Before, picking meant entering a folder and pressing Enter again with nothing highlighted. The title names the mode. fzt v0.2.77, fzt-terminal v0.1.103; OpenProject FZT-51.
+diff --git a/frontend/front_darwin.go b/frontend/front_darwin.go
+new file mode 100644
+index 0000000..d9fee9a
+--- /dev/null
++++ b/frontend/front_darwin.go
+@@ -0,0 +1,4 @@
++package main
++
++// On macOS the picker runs in the terminal pane that launched it, already in front.
++func bringToFront() {}
+diff --git a/frontend/front_windows.go b/frontend/front_windows.go
+new file mode 100644
+index 0000000..17bfe89
+--- /dev/null
++++ b/frontend/front_windows.go
+@@ -0,0 +1,17 @@
++package main
++
++import "syscall"
++
++var (
++	kernel32            = syscall.NewLazyDLL("kernel32.dll")
++	user32              = syscall.NewLazyDLL("user32.dll")
++	getConsoleWindow    = kernel32.NewProc("GetConsoleWindow")
++	setForegroundWindow = user32.NewProc("SetForegroundWindow")
++)
++
++func bringToFront() {
++	hwnd, _, _ := getConsoleWindow.Call()
++	if hwnd != 0 {
++		setForegroundWindow.Call(hwnd)
++	}
++}
+diff --git a/frontend/main.go b/frontend/main.go
+index e449441..0aa0505 100644
+--- a/frontend/main.go
++++ b/frontend/main.go
+@@ -14,7 +14,6 @@ import (
+ 	"fmt"
+ 	"os"
+ 	"strings"
+-	"syscall"
+ 
+ 	"github.com/romaine-life/fzt/core"
+ 	"github.com/romaine-life/fzt-terminal/tui"
+@@ -22,20 +21,6 @@ import (
+ 	"github.com/romaine-life/fzt-picker/frontend/picker"
+ )
+ 
+-var (
+-	kernel32            = syscall.NewLazyDLL("kernel32.dll")
+-	user32              = syscall.NewLazyDLL("user32.dll")
+-	getConsoleWindow    = kernel32.NewProc("GetConsoleWindow")
+-	setForegroundWindow = user32.NewProc("SetForegroundWindow")
+-)
+-
+-func bringToFront() {
+-	hwnd, _, _ := getConsoleWindow.Call()
+-	if hwnd != 0 {
+-		setForegroundWindow.Call(hwnd)
+-	}
+-}
+-
+ func main() {
+ 	foldersOnly := false
+ 	title := ""
+diff --git a/frontend/picker/hidden_darwin.go b/frontend/picker/hidden_darwin.go
+new file mode 100644
+index 0000000..a6147f2
+--- /dev/null
++++ b/frontend/picker/hidden_darwin.go
+@@ -0,0 +1,21 @@
++package picker
++
++import (
++	"path/filepath"
++	"strings"
++	"syscall"
++)
++
++// isHiddenFile hides what Finder hides: dot names and the UF_HIDDEN flag
++// (chflags hidden, as on ~/Library).
++func isHiddenFile(path string) bool {
++	if strings.HasPrefix(filepath.Base(path), ".") {
++		return true
++	}
++	var st syscall.Stat_t
++	if err := syscall.Stat(path, &st); err != nil {
++		return true // broken link or no permission: nothing to open
++	}
++	const UF_HIDDEN = 0x8000
++	return st.Flags&UF_HIDDEN != 0
++}
+diff --git a/frontend/picker/hidden_darwin_test.go b/frontend/picker/hidden_darwin_test.go
+new file mode 100644
+index 0000000..5645bb0
+--- /dev/null
++++ b/frontend/picker/hidden_darwin_test.go
+@@ -0,0 +1,32 @@
++package picker
++
++import (
++	"os"
++	"path/filepath"
++	"syscall"
++	"testing"
++)
++
++func TestDarwinHiddenFiles(t *testing.T) {
++	dir := t.TempDir()
++	for _, name := range []string{"shown", ".dotted", "flagged"} {
++		if err := os.Mkdir(filepath.Join(dir, name), 0o755); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if err := syscall.Chflags(filepath.Join(dir, "flagged"), 0x8000); err != nil { // UF_HIDDEN
++		t.Fatal(err)
++	}
++	if err := os.Symlink(filepath.Join(dir, "missing"), filepath.Join(dir, "broken")); err != nil {
++		t.Fatal(err)
++	}
++
++	items := NewDirProvider(false).LoadChildren(dir)
++	if len(items) != 1 || items[0].Fields[0] != "shown" {
++		var names []string
++		for _, it := range items {
++			names = append(names, it.Fields[0])
++		}
++		t.Fatalf("got %v, want only shown", names)
++	}
++}
+diff --git a/frontend/picker/hidden_windows.go b/frontend/picker/hidden_windows.go
+new file mode 100644
+index 0000000..4f7d461
+--- /dev/null
++++ b/frontend/picker/hidden_windows.go
+@@ -0,0 +1,14 @@
++package picker
++
++import "syscall"
++
++func isHiddenFile(path string) bool {
++	pathW, _ := syscall.UTF16PtrFromString(path)
++	attrs, err := syscall.GetFileAttributes(pathW)
++	if err != nil {
++		return true // can't read attributes — likely a protected system folder
++	}
++	const FILE_ATTRIBUTE_HIDDEN = 0x2
++	const FILE_ATTRIBUTE_SYSTEM = 0x4
++	return attrs&(FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM) != 0
++}
+diff --git a/frontend/picker/items.go b/frontend/picker/items.go
+index 0ba4bb5..c345ac6 100644
+--- a/frontend/picker/items.go
++++ b/frontend/picker/items.go
+@@ -1,6 +1,9 @@
+ package picker
+ 
+ import (
++	"path/filepath"
++	"strings"
++
+ 	"github.com/romaine-life/fzt/core"
+ )
+ 
+@@ -9,13 +12,17 @@ func HeaderItem(fields ...string) core.Item {
+ 	return core.Item{Fields: fields, Depth: -1}
+ }
+ 
+-// DriveRoots lists the drive roots with Original set to the openable path
+-// ("D:\"), since their Fields[0] is the bare "D:". Selections in both picker
+-// paths return Item.Original.
++// DriveRoots lists the filesystem roots with Original set to the openable path:
++// "D:\" for Windows' bare "D:", "/" on macOS. Selections in both picker paths
++// return Item.Original.
+ func DriveRoots() []core.Item {
+ 	items := core.ListDriveRoots()
+ 	for i := range items {
+-		items[i].Original = items[i].Fields[0] + `\`
++		root := items[i].Fields[0]
++		if !strings.HasSuffix(root, string(filepath.Separator)) {
++			root += string(filepath.Separator)
++		}
++		items[i].Original = root
+ 	}
+ 	return items
+ }
+diff --git a/frontend/picker/items_test.go b/frontend/picker/items_test.go
+new file mode 100644
+index 0000000..fbfbfed
+--- /dev/null
++++ b/frontend/picker/items_test.go
+@@ -0,0 +1,48 @@
++package picker
++
++import (
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++)
++
++func TestDriveRootsOriginalIsOpenableRoot(t *testing.T) {
++	roots := DriveRoots()
++	if len(roots) == 0 {
++		t.Fatal("no roots")
++	}
++	for _, r := range roots {
++		if !strings.HasSuffix(r.Original, string(filepath.Separator)) {
++			t.Errorf("root %q: Original %q lacks a trailing separator", r.Fields[0], r.Original)
++		}
++		if strings.HasSuffix(r.Original, string(filepath.Separator)+string(filepath.Separator)) {
++			t.Errorf("root %q: Original %q has a doubled separator", r.Fields[0], r.Original)
++		}
++		if fi, err := os.Stat(r.Original); err != nil || !fi.IsDir() {
++			t.Errorf("root %q: Original %q is not an openable directory", r.Fields[0], r.Original)
++		}
++	}
++}
++
++func TestLoadChildrenFoldersOnlyAndFullPaths(t *testing.T) {
++	dir := t.TempDir()
++	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o755); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.WriteFile(filepath.Join(dir, "file.txt"), nil, 0o644); err != nil {
++		t.Fatal(err)
++	}
++
++	items := NewDirProvider(true).LoadChildren(dir)
++	if len(items) != 1 || items[0].Fields[0] != "sub" {
++		t.Fatalf("folders-only: got %v, want just sub", items)
++	}
++	if want := filepath.Join(dir, "sub"); items[0].Original != want {
++		t.Errorf("Original = %q, want %q", items[0].Original, want)
++	}
++
++	if n := len(NewDirProvider(false).LoadChildren(dir)); n != 2 {
++		t.Errorf("files and folders: got %d items, want 2", n)
++	}
++}
+diff --git a/frontend/picker/provider.go b/frontend/picker/provider.go
+index f5d48b7..506c348 100644
+--- a/frontend/picker/provider.go
++++ b/frontend/picker/provider.go
+@@ -2,12 +2,11 @@ package picker
+ 
+ import (
+ 	"path/filepath"
+-	"syscall"
+ 
+ 	"github.com/romaine-life/fzt/core"
+ )
+ 
+-// DirProvider wraps core.DirProvider and filters out hidden/system files on Windows.
++// DirProvider wraps core.DirProvider and filters out hidden files (hidden_<os>.go).
+ // When FoldersOnly is set, files are excluded entirely.
+ type DirProvider struct {
+ 	inner       *core.DirProvider
+@@ -38,14 +37,3 @@ func (p *DirProvider) LoadChildren(parentPath string) []core.Item {
+ 	}
+ 	return filtered
+ }
+-
+-func isHiddenFile(path string) bool {
+-	pathW, _ := syscall.UTF16PtrFromString(path)
+-	attrs, err := syscall.GetFileAttributes(pathW)
+-	if err != nil {
+-		return true // can't read attributes — likely a protected system folder
+-	}
+-	const FILE_ATTRIBUTE_HIDDEN = 0x2
+-	const FILE_ATTRIBUTE_SYSTEM = 0x4
+-	return attrs&(FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM) != 0
+-}

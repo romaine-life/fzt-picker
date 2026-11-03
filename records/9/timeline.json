@@ -1,0 +1,169 @@
+[
+  {
+    "author": {
+      "date": "2026-10-31T03:44:20Z",
+      "email": "292189596+nelson-stellarus@users.noreply.github.com",
+      "name": "Nelson"
+    },
+    "committer": {
+      "date": "2026-10-31T03:44:20Z",
+      "email": "292189596+nelson-stellarus@users.noreply.github.com",
+      "name": "Nelson"
+    },
+    "event": "committed",
+    "html_url": "https://github.com/romaine-life/fzt-picker/commit/f6ac4a7e28e91671ba309eac7f5b8879af41c2f2",
+    "message": "MACOS.md: what a macOS build of the picker needs (OpenProject 2181)\n\nCo-Authored-By: Claude Opus 5.5 \u003cnoreply@anthropic.com\u003e",
+    "node_id": "C_kwDOR7WrXdoAKGY2YWM0YTdlMjhlOTE2NzFiYTMwOWVhYzdmNWI4ODc5YWY0MWMyZjI",
+    "parents": [
+      {
+        "html_url": "https://github.com/romaine-life/fzt-picker/commit/d192db6b79ec5749befd38d4874fb4c4b436c041",
+        "sha": "d192db6b79ec5749befd38d4874fb4c4b436c041",
+        "url": "https://api.github.com/repos/romaine-life/fzt-picker/git/commits/d192db6b79ec5749befd38d4874fb4c4b436c041"
+      }
+    ],
+    "sha": "f6ac4a7e28e91671ba309eac7f5b8879af41c2f2",
+    "tree": {
+      "sha": "a62e0ceb52b9164981c8402c91850d43d5e3dad8",
+      "url": "https://api.github.com/repos/romaine-life/fzt-picker/git/trees/a62e0ceb52b9164981c8402c91850d43d5e3dad8"
+    },
+    "url": "https://api.github.com/repos/romaine-life/fzt-picker/git/commits/f6ac4a7e28e91671ba309eac7f5b8879af41c2f2",
+    "verification": {
+      "payload": null,
+      "reason": "unsigned",
+      "signature": null,
+      "verified": false,
+      "verified_at": null
+    }
+  },
+  {
+    "author": {
+      "date": "2026-10-31T03:49:38Z",
+      "email": "fullnelsongrip@gmail.com",
+      "name": "Nelson"
+    },
+    "committer": {
+      "date": "2026-10-31T03:49:38Z",
+      "email": "fullnelsongrip@gmail.com",
+      "name": "Nelson"
+    },
+    "event": "committed",
+    "html_url": "https://github.com/romaine-life/fzt-picker/commit/6fb666ae1b6b52ba094913b1145111baf2022de0",
+    "message": "Build the standalone frontend for macOS (TMUX-21)\n\nWindows-only code moves to _windows.go files; macOS hides dot names and\nUF_HIDDEN. Drive roots stop gaining a stray backslash on /. CI builds,\nvets and tests on macos-latest and releases fzt-picker-frontend-darwin-arm64.",
+    "node_id": "C_kwDOR7WrXdoAKDZmYjY2NmFlMWI2YjUyYmEwOTQ5MTNiMTE0NTExMWJhZjIwMjJkZTA",
+    "parents": [
+      {
+        "html_url": "https://github.com/romaine-life/fzt-picker/commit/f6ac4a7e28e91671ba309eac7f5b8879af41c2f2",
+        "sha": "f6ac4a7e28e91671ba309eac7f5b8879af41c2f2",
+        "url": "https://api.github.com/repos/romaine-life/fzt-picker/git/commits/f6ac4a7e28e91671ba309eac7f5b8879af41c2f2"
+      }
+    ],
+    "sha": "6fb666ae1b6b52ba094913b1145111baf2022de0",
+    "tree": {
+      "sha": "72073d3a04d3ee4e9b12340ffe05d81154f86513",
+      "url": "https://api.github.com/repos/romaine-life/fzt-picker/git/trees/72073d3a04d3ee4e9b12340ffe05d81154f86513"
+    },
+    "url": "https://api.github.com/repos/romaine-life/fzt-picker/git/commits/6fb666ae1b6b52ba094913b1145111baf2022de0",
+    "verification": {
+      "payload": null,
+      "reason": "unsigned",
+      "signature": null,
+      "verified": false,
+      "verified_at": null
+    }
+  },
+  {
+    "actor": {
+      "avatar_url": "https://avatars.githubusercontent.com/u/18473267?v=4",
+      "events_url": "https://api.github.com/users/nelsong6/events{/privacy}",
+      "followers_url": "https://api.github.com/users/nelsong6/followers",
+      "following_url": "https://api.github.com/users/nelsong6/following{/other_user}",
+      "gists_url": "https://api.github.com/users/nelsong6/gists{/gist_id}",
+      "gravatar_id": "",
+      "html_url": "https://github.com/nelsong6",
+      "id": 18473267,
+      "login": "nelsong6",
+      "node_id": "MDQ6VXNlcjE4NDczMjY3",
+      "organizations_url": "https://api.github.com/users/nelsong6/orgs",
+      "received_events_url": "https://api.github.com/users/nelsong6/received_events",
+      "repos_url": "https://api.github.com/users/nelsong6/repos",
+      "site_admin": false,
+      "starred_url": "https://api.github.com/users/nelsong6/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/nelsong6/subscriptions",
+      "type": "User",
+      "url": "https://api.github.com/users/nelsong6",
+      "user_view_type": "public"
+    },
+    "commit_id": "a3b2e5b5bfa1eed0c82009b77cb23491d1244b4a",
+    "commit_url": "https://api.github.com/repos/romaine-life/fzt-picker/commits/a3b2e5b5bfa1eed0c82009b77cb23491d1244b4a",
+    "created_at": "2026-10-31T03:52:22Z",
+    "event": "merged",
+    "id": 34752003251,
+    "node_id": "ME_lADOR7WrXc8AAAABbWy3sc8AAAAIF2F8sw",
+    "performed_via_github_app": null,
+    "url": "https://api.github.com/repos/romaine-life/fzt-picker/issues/events/34752003251"
+  },
+  {
+    "actor": {
+      "avatar_url": "https://avatars.githubusercontent.com/u/18473267?v=4",
+      "events_url": "https://api.github.com/users/nelsong6/events{/privacy}",
+      "followers_url": "https://api.github.com/users/nelsong6/followers",
+      "following_url": "https://api.github.com/users/nelsong6/following{/other_user}",
+      "gists_url": "https://api.github.com/users/nelsong6/gists{/gist_id}",
+      "gravatar_id": "",
+      "html_url": "https://github.com/nelsong6",
+      "id": 18473267,
+      "login": "nelsong6",
+      "node_id": "MDQ6VXNlcjE4NDczMjY3",
+      "organizations_url": "https://api.github.com/users/nelsong6/orgs",
+      "received_events_url": "https://api.github.com/users/nelsong6/received_events",
+      "repos_url": "https://api.github.com/users/nelsong6/repos",
+      "site_admin": false,
+      "starred_url": "https://api.github.com/users/nelsong6/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/nelsong6/subscriptions",
+      "type": "User",
+      "url": "https://api.github.com/users/nelsong6",
+      "user_view_type": "public"
+    },
+    "commit_id": null,
+    "commit_url": null,
+    "created_at": "2026-10-31T03:52:22Z",
+    "event": "closed",
+    "id": 34752003347,
+    "intent": null,
+    "node_id": "CE_lADOR7WrXc8AAAABbWy3sc8AAAAIF2F9Ew",
+    "performed_via_github_app": null,
+    "state_reason": null,
+    "url": "https://api.github.com/repos/romaine-life/fzt-picker/issues/events/34752003347"
+  },
+  {
+    "actor": {
+      "avatar_url": "https://avatars.githubusercontent.com/u/18473267?v=4",
+      "events_url": "https://api.github.com/users/nelsong6/events{/privacy}",
+      "followers_url": "https://api.github.com/users/nelsong6/followers",
+      "following_url": "https://api.github.com/users/nelsong6/following{/other_user}",
+      "gists_url": "https://api.github.com/users/nelsong6/gists{/gist_id}",
+      "gravatar_id": "",
+      "html_url": "https://github.com/nelsong6",
+      "id": 18473267,
+      "login": "nelsong6",
+      "node_id": "MDQ6VXNlcjE4NDczMjY3",
+      "organizations_url": "https://api.github.com/users/nelsong6/orgs",
+      "received_events_url": "https://api.github.com/users/nelsong6/received_events",
+      "repos_url": "https://api.github.com/users/nelsong6/repos",
+      "site_admin": false,
+      "starred_url": "https://api.github.com/users/nelsong6/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/nelsong6/subscriptions",
+      "type": "User",
+      "url": "https://api.github.com/users/nelsong6",
+      "user_view_type": "public"
+    },
+    "commit_id": null,
+    "commit_url": null,
+    "created_at": "2026-10-31T03:52:24Z",
+    "event": "head_ref_deleted",
+    "id": 34752004874,
+    "node_id": "HRDE_lADOR7WrXc8AAAABbWy3sc8AAAAIF2GDCg",
+    "performed_via_github_app": null,
+    "url": "https://api.github.com/repos/romaine-life/fzt-picker/issues/events/34752004874"
+  }
+]

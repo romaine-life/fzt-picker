@@ -1,0 +1,62 @@
+[
+  {
+    "additions": 6,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/72e0fdec3362ef6a8a45d2f22c31d6bf8dd774f8/CLAUDE.md",
+    "changes": 8,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/CLAUDE.md?ref=72e0fdec3362ef6a8a45d2f22c31d6bf8dd774f8",
+    "deletions": 2,
+    "filename": "CLAUDE.md",
+    "patch": "@@ -39,14 +39,14 @@ Picker reads all colors from `tui/style.go` (`tui.PaletteRGB`, `tui.ColorToRGB()\n \n ### Scoped view\n \n-The picker shows one folder at a time (fzt's `Config.ScopedView`): entering a folder replaces the list with its contents, and the prompt bar shows the folder's full path. Enter, Right, Space or a click goes into a folder; Left, Backspace on an empty query, or Escape goes up. Search covers the current folder only. A start folder (`--start-dir`, or the app's `SetFolder`) is entered from the drive roots, so going up past it still works. The `:` command palette is off (`HidePalette`).\n+The picker shows one folder at a time (fzt's `Config.ScopedView`): entering a folder replaces the list with its contents, and the prompt bar shows the folder's full path. Right, Space, Tab or a click goes into a folder (Enter too, in a file picker); Left, Backspace on an empty query, or Escape goes up. Search covers the current folder only. A start folder (`--start-dir`, or the app's `SetFolder`) is entered from the drive roots, so going up past it still works. The `:` command palette is off (`HidePalette`).\n \n ### Folder-only mode\n \n When an app sets `FOS_PICKFOLDERS` (e.g. Electron's `dialog.showOpenDialog({ properties: ['openDirectory'] })`), the COM proxy detects the flag in `SetOptions` and passes `foldersOnly=true` to the frontend. This triggers two behaviors:\n \n - **DirProvider filtering**: `picker.DirProvider` skips non-directory items in `LoadChildren`, so only folders appear in the tree.\n-- **Folder selection**: fzt's `Config.FoldersOnly` with the scoped view makes Enter with nothing under the cursor pick the folder you are in, giving a two-press gesture (Enter to go in, Enter again to pick it). The prompt hint says so.\n+- **Folder selection**: with fzt's `Config.FoldersOnly` and the scoped view, Enter picks a folder instead of entering it: the highlighted one, else the top match of what you typed, else the folder you are in. Right, Space, Tab or a click goes in. The border title starts with the mode (`󰉋 Folder picker`, or `File picker` for files), followed by the caller's `--title`, so the different Enter is never a surprise.\n \n Both the COM hook path and standalone binary use the same DirProvider and config, so behavior is identical. The standalone binary accepts `--folders-only` to enable this mode.\n \n@@ -105,6 +105,10 @@ The hook DLL logs to `%TEMP%\\picker.log` with the host process PID prefix. Each\n \n ## Changelog\n \n+### 2026-10-29: Enter picks the folder\n+\n+- In a folder picker Enter picks the highlighted, typed or current folder; Right, Space, Tab or a click goes in. Before, picking meant entering a folder and pressing Enter again with nothing highlighted. The title names the mode. fzt v0.2.77, fzt-terminal v0.1.103; OpenProject FZT-51.\n+\n ### 2026-10-29: Scoped view, flicker, published to the NAS\n \n - **Scoped view** — one folder at a time with its full path in the prompt bar, instead of expanding folders in place (their contents could land below the window). `:` palette off. Engine and renderer changes in fzt and fzt-terminal.",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/72e0fdec3362ef6a8a45d2f22c31d6bf8dd774f8/CLAUDE.md",
+    "sha": "37d3c36645433be5652c7fd32ffd925688e3df48",
+    "status": "modified"
+  },
+  {
+    "additions": 0,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/72e0fdec3362ef6a8a45d2f22c31d6bf8dd774f8/frontend%2Fcgo%2Fpicker.go",
+    "changes": 1,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/frontend%2Fcgo%2Fpicker.go?ref=72e0fdec3362ef6a8a45d2f22c31d6bf8dd774f8",
+    "deletions": 1,
+    "filename": "frontend/cgo/picker.go",
+    "patch": "@@ -222,7 +222,6 @@ func runPicker(foldersOnly bool, startDir string, hwndOwner uintptr) string {\n \t\tFoldersOnly: foldersOnly,\n \t\tStartDir:    startDir,\n \t\tProvider:    provider,\n-\t\tTitle:       title,\n \t})\n \n \tpickerSession = tui.NewTreeSession(items, cfg, gridCols, gridRows)",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/72e0fdec3362ef6a8a45d2f22c31d6bf8dd774f8/frontend%2Fcgo%2Fpicker.go",
+    "sha": "ac3976235904b37932243aca3b615e4d62c04377",
+    "status": "modified"
+  },
+  {
+    "additions": 2,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/72e0fdec3362ef6a8a45d2f22c31d6bf8dd774f8/frontend%2Fgo.mod",
+    "changes": 4,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/frontend%2Fgo.mod?ref=72e0fdec3362ef6a8a45d2f22c31d6bf8dd774f8",
+    "deletions": 2,
+    "filename": "frontend/go.mod",
+    "patch": "@@ -4,8 +4,8 @@ go 1.26.1\n \n require (\n \tgithub.com/gdamore/tcell/v2 v2.13.10\n-\tgithub.com/romaine-life/fzt v0.2.76\n-\tgithub.com/romaine-life/fzt-terminal v0.1.102\n+\tgithub.com/romaine-life/fzt v0.2.77\n+\tgithub.com/romaine-life/fzt-terminal v0.1.103\n )\n \n require (",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/72e0fdec3362ef6a8a45d2f22c31d6bf8dd774f8/frontend%2Fgo.mod",
+    "sha": "c80b39ce9cedff903c596e238e93f8a386c89338",
+    "status": "modified"
+  },
+  {
+    "additions": 4,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/72e0fdec3362ef6a8a45d2f22c31d6bf8dd774f8/frontend%2Fgo.sum",
+    "changes": 8,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/frontend%2Fgo.sum?ref=72e0fdec3362ef6a8a45d2f22c31d6bf8dd774f8",
+    "deletions": 4,
+    "filename": "frontend/go.sum",
+    "patch": "@@ -6,12 +6,12 @@ github.com/lucasb-eyer/go-colorful v1.3.0 h1:2/yBRLdWBZKrf7gB40FoiKfAWYQ0lqNcbuQ\n github.com/lucasb-eyer/go-colorful v1.3.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=\n github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=\n github.com/rivo/uniseg v0.4.7/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=\n-github.com/romaine-life/fzt v0.2.76 h1:F7wLjPJTu9+/FeIaZ8yeiZE1HYvLcMDw8RAUjR2nBGo=\n-github.com/romaine-life/fzt v0.2.76/go.mod h1:+/4sSnR4iFd8ADQWCwJublmXt9lPzlvweFJJKEbTxLw=\n+github.com/romaine-life/fzt v0.2.77 h1:M1+4IHnKQZ/dqx2YVOpVzWoJbTOvXTgO7+vkif1LRYw=\n+github.com/romaine-life/fzt v0.2.77/go.mod h1:+/4sSnR4iFd8ADQWCwJublmXt9lPzlvweFJJKEbTxLw=\n github.com/romaine-life/fzt-frontend v0.1.34 h1:CGCLJv86meizuaK6KXkrmSqkaMmfgiwmVP8inbmVMJA=\n github.com/romaine-life/fzt-frontend v0.1.34/go.mod h1:MCQ7uATeZ8te/3Pwv7K98qpD/0d6jKhQVSvF3VqWv40=\n-github.com/romaine-life/fzt-terminal v0.1.102 h1:fta7vUTdCuGmvPqmwfQccVhugO7W3KC5M/6ncNt0pA0=\n-github.com/romaine-life/fzt-terminal v0.1.102/go.mod h1:kY+qdl3XVaDXvnpSABa5oJ4doM6m/if2zlGomcdwZrg=\n+github.com/romaine-life/fzt-terminal v0.1.103 h1:XwDgJhCe+qqlXPJ8y7EnvdIpgy8ILligULe+sH8A5a8=\n+github.com/romaine-life/fzt-terminal v0.1.103/go.mod h1:P3WQ4Aa7J5BGpePJNEf6mjS7XpUgob38XpbQ+y1fC8o=\n github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=\n golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=\n golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/72e0fdec3362ef6a8a45d2f22c31d6bf8dd774f8/frontend%2Fgo.sum",
+    "sha": "dbe7a350315a4701864364df2ff1c7026b80da3d",
+    "status": "modified"
+  },
+  {
+    "additions": 14,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/72e0fdec3362ef6a8a45d2f22c31d6bf8dd774f8/frontend%2Fpicker%2Fconfig.go",
+    "changes": 19,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/frontend%2Fpicker%2Fconfig.go?ref=72e0fdec3362ef6a8a45d2f22c31d6bf8dd774f8",
+    "deletions": 5,
+    "filename": "frontend/picker/config.go",
+    "patch": "@@ -10,22 +10,31 @@ type Options struct {\n \tFoldersOnly bool\n \tStartDir    string\n \tProvider    core.TreeProvider\n-\tTitle       string // optional override; empty uses DefaultTitle\n+\tTitle       string // optional purpose shown after the mode, e.g. \"Launch Claude in\"\n }\n \n-// DefaultTitle returns \"Pick a file\" or \"Pick a folder\".\n+// DefaultTitle returns \"Pick a file\" or \"Pick a folder\", the popup window's caption.\n func DefaultTitle(foldersOnly bool) string {\n \tif foldersOnly {\n \t\treturn \"Pick a folder\"\n \t}\n \treturn \"Pick a file\"\n }\n \n+// ModeTitle names what the picker returns, with its icon, so a folder picker\n+// (where Enter picks a folder) never looks like a file picker.\n+func ModeTitle(foldersOnly bool) string {\n+\tif foldersOnly {\n+\t\treturn \"\\U000F024B Folder picker\"\n+\t}\n+\treturn \"\\uF15B File picker\"\n+}\n+\n // NewConfig builds the shared tui.Config for picker sessions.\n func NewConfig(opts Options) tui.Config {\n-\ttitle := opts.Title\n-\tif title == \"\" {\n-\t\ttitle = DefaultTitle(opts.FoldersOnly)\n+\ttitle := ModeTitle(opts.FoldersOnly)\n+\tif opts.Title != \"\" {\n+\t\ttitle += \" \\u00b7 \" + opts.Title\n \t}\n \treturn tui.Config{\n \t\tLayout:       \"reverse\",",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/72e0fdec3362ef6a8a45d2f22c31d6bf8dd774f8/frontend%2Fpicker%2Fconfig.go",
+    "sha": "8d63758172e98a73ef262f7712cae0874b498d6c",
+    "status": "modified"
+  }
+]

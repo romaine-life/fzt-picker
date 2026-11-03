@@ -1,0 +1,38 @@
+[
+  {
+    "additions": 3,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/a658d9e093e13b7b7e4453b85a94093c6bf751b3/frontend%2Fgo.mod",
+    "changes": 6,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/frontend%2Fgo.mod?ref=a658d9e093e13b7b7e4453b85a94093c6bf751b3",
+    "deletions": 3,
+    "filename": "frontend/go.mod",
+    "patch": "@@ -4,15 +4,15 @@ go 1.26.1\n \n require (\n \tgithub.com/gdamore/tcell/v2 v2.13.10\n-\tgithub.com/romaine-life/fzt v0.2.77\n-\tgithub.com/romaine-life/fzt-terminal v0.1.103\n+\tgithub.com/romaine-life/fzt v0.2.78\n+\tgithub.com/romaine-life/fzt-terminal v0.1.109\n )\n \n require (\n \tgithub.com/gdamore/encoding v1.0.1 // indirect\n \tgithub.com/lucasb-eyer/go-colorful v1.3.0 // indirect\n \tgithub.com/rivo/uniseg v0.4.7 // indirect\n-\tgithub.com/romaine-life/fzt-frontend v0.1.34 // indirect\n+\tgithub.com/romaine-life/fzt-frontend v0.1.35 // indirect\n \tgolang.org/x/sys v0.38.0 // indirect\n \tgolang.org/x/term v0.37.0 // indirect\n \tgolang.org/x/text v0.31.0 // indirect",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/a658d9e093e13b7b7e4453b85a94093c6bf751b3/frontend%2Fgo.mod",
+    "sha": "0291f4c7143a5102f6f4baf78546103fa6f5f085",
+    "status": "modified"
+  },
+  {
+    "additions": 6,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/a658d9e093e13b7b7e4453b85a94093c6bf751b3/frontend%2Fgo.sum",
+    "changes": 12,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/frontend%2Fgo.sum?ref=a658d9e093e13b7b7e4453b85a94093c6bf751b3",
+    "deletions": 6,
+    "filename": "frontend/go.sum",
+    "patch": "@@ -6,12 +6,12 @@ github.com/lucasb-eyer/go-colorful v1.3.0 h1:2/yBRLdWBZKrf7gB40FoiKfAWYQ0lqNcbuQ\n github.com/lucasb-eyer/go-colorful v1.3.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=\n github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=\n github.com/rivo/uniseg v0.4.7/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=\n-github.com/romaine-life/fzt v0.2.77 h1:M1+4IHnKQZ/dqx2YVOpVzWoJbTOvXTgO7+vkif1LRYw=\n-github.com/romaine-life/fzt v0.2.77/go.mod h1:+/4sSnR4iFd8ADQWCwJublmXt9lPzlvweFJJKEbTxLw=\n-github.com/romaine-life/fzt-frontend v0.1.34 h1:CGCLJv86meizuaK6KXkrmSqkaMmfgiwmVP8inbmVMJA=\n-github.com/romaine-life/fzt-frontend v0.1.34/go.mod h1:MCQ7uATeZ8te/3Pwv7K98qpD/0d6jKhQVSvF3VqWv40=\n-github.com/romaine-life/fzt-terminal v0.1.103 h1:XwDgJhCe+qqlXPJ8y7EnvdIpgy8ILligULe+sH8A5a8=\n-github.com/romaine-life/fzt-terminal v0.1.103/go.mod h1:P3WQ4Aa7J5BGpePJNEf6mjS7XpUgob38XpbQ+y1fC8o=\n+github.com/romaine-life/fzt v0.2.78 h1:Sp+ooiDB2Aqi0k28NB10u+aar81YryFPMYt0MBWF5AA=\n+github.com/romaine-life/fzt v0.2.78/go.mod h1:+/4sSnR4iFd8ADQWCwJublmXt9lPzlvweFJJKEbTxLw=\n+github.com/romaine-life/fzt-frontend v0.1.35 h1:lZvvt4MpUD8MFhBWFmQn/0RdYLy4cHI8fjXtTf/nCaI=\n+github.com/romaine-life/fzt-frontend v0.1.35/go.mod h1:XFnCbkSV+bBdki1Y69RYmQ5TD4EJYSVY5jmMcEi9HAo=\n+github.com/romaine-life/fzt-terminal v0.1.109 h1:58/hApAqr4Lp7t1PdluYh+dPv6Q9vU0JHHkpG6A79x0=\n+github.com/romaine-life/fzt-terminal v0.1.109/go.mod h1:8+7IkT0K7q6dYkEBMC8+txZzn9Tuq/r4+pN73tvN1VY=\n github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=\n golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=\n golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/a658d9e093e13b7b7e4453b85a94093c6bf751b3/frontend%2Fgo.sum",
+    "sha": "2d560a882f9685cf5c94d56a34ea009b09a90d2c",
+    "status": "modified"
+  },
+  {
+    "additions": 3,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/a658d9e093e13b7b7e4453b85a94093c6bf751b3/frontend%2Fmain.go",
+    "changes": 6,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/frontend%2Fmain.go?ref=a658d9e093e13b7b7e4453b85a94093c6bf751b3",
+    "deletions": 3,
+    "filename": "frontend/main.go",
+    "patch": "@@ -86,15 +86,15 @@ func main() {\n \n \tbringToFront()\n \n-\tresult, err := tui.Run(items, cfg)\n+\tpick, err := tui.Run(items, cfg)\n \tif err != nil {\n \t\tfmt.Fprintf(os.Stderr, \"fzt-picker-frontend: %v\\n\", err)\n \t\tos.Exit(1)\n \t}\n \n-\tif result == \"\" {\n+\tif pick.Kind == \"cancel\" {\n \t\tos.Exit(130)\n \t}\n \n-\tfmt.Println(strings.TrimSpace(result))\n+\tfmt.Println(strings.TrimSpace(pick.Output))\n }",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/a658d9e093e13b7b7e4453b85a94093c6bf751b3/frontend%2Fmain.go",
+    "sha": "e44944151081468627a6a435190cf02063cc0db5",
+    "status": "modified"
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "author": null,
+    "comments_url": "https://api.github.com/repos/romaine-life/fzt-picker/commits/684e3ce28dd82183afa76a30699fbb56cf6c9a2f/comments",
+    "commit": {
+      "author": {
+        "date": "2026-10-30T02:55:40Z",
+        "email": "fullnelsongrip@gmail.com",
+        "name": "Nelson"
+      },
+      "comment_count": 0,
+      "committer": {
+        "date": "2026-10-30T02:55:40Z",
+        "email": "fullnelsongrip@gmail.com",
+        "name": "Nelson"
+      },
+      "message": "CI: run the build on every pull request",
+      "tree": {
+        "sha": "9acf30fe875b95bfaeb3af209829ac3bf73035b5",
+        "url": "https://api.github.com/repos/romaine-life/fzt-picker/git/trees/9acf30fe875b95bfaeb3af209829ac3bf73035b5"
+      },
+      "url": "https://api.github.com/repos/romaine-life/fzt-picker/git/commits/684e3ce28dd82183afa76a30699fbb56cf6c9a2f",
+      "verification": {
+        "payload": null,
+        "reason": "unsigned",
+        "signature": null,
+        "verified": false,
+        "verified_at": null
+      }
+    },
+    "committer": null,
+    "html_url": "https://github.com/romaine-life/fzt-picker/commit/684e3ce28dd82183afa76a30699fbb56cf6c9a2f",
+    "node_id": "C_kwDOR7WrXdoAKDY4NGUzY2UyOGRkODIxODNhZmE3NmEzMDY5OWZiYjU2Y2Y2YzlhMmY",
+    "parents": [
+      {
+        "html_url": "https://github.com/romaine-life/fzt-picker/commit/96c283361746e89e98d826e699b9f69da3093dc6",
+        "sha": "96c283361746e89e98d826e699b9f69da3093dc6",
+        "url": "https://api.github.com/repos/romaine-life/fzt-picker/commits/96c283361746e89e98d826e699b9f69da3093dc6"
+      }
+    ],
+    "sha": "684e3ce28dd82183afa76a30699fbb56cf6c9a2f",
+    "url": "https://api.github.com/repos/romaine-life/fzt-picker/commits/684e3ce28dd82183afa76a30699fbb56cf6c9a2f"
+  }
+]

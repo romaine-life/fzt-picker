@@ -1,0 +1,144 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index f94ffe1..6dcb11a 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -15,7 +15,7 @@ COM's `IModalWindow::Show()` must present a visible window owned by the host app
+ 
+ ### COM hook components
+ 
+-- **hook DLL** (`fzt_picker_hook.dll`): Loaded into every GUI process via `SetWindowsHookEx`. Hooks `CoCreateInstance` in `combase.dll` to intercept `CLSID_FileOpenDialog`. Returns a COM proxy.
++- **hook DLL** (`fzt_picker_hook.dll`): Loaded into every GUI process via `SetWindowsHookEx`. Hooks `CoCreateInstance` in `combase.dll` to intercept `CLSID_FileOpenDialog`. Returns a COM proxy. A copy stays loaded after its injector exits, so one process can hold several releases' copies; only the copy holding the process's `Local\fzt-picker-detour-<pid>` mutex patches, and another takes over from `HookProc` once it unloads. Copies that each patched on top of the last crashed the host when one unloaded (FZT-61).
+ - **injector** (`fzt-picker.exe`): Windows GUI app (no console) that installs the global CBT hook and maintains a message loop. Shows a system tray icon ("fzt picker") with right-click Exit. Killing it removes the hook from new processes.
+ - **test-trigger** (`test-trigger.exe`): Standalone binary that calls `CoCreateInstance(CLSID_FileOpenDialog)` and `Show()` to test the hook without needing a real app. `--folders` flag sets `FOS_PICKFOLDERS` to test folder-pick mode.
+ 
+diff --git a/windows/hook/Cargo.toml b/windows/hook/Cargo.toml
+index 1f575bf..16955e8 100644
+--- a/windows/hook/Cargo.toml
++++ b/windows/hook/Cargo.toml
+@@ -19,6 +19,7 @@ windows = { version = "0.58", features = [
+     "Win32_UI_WindowsAndMessaging",
+     "Win32_System_Memory",
+     "Win32_System_Threading",
++    "Win32_Security",
+ ] }
+ windows-implement = "0.58"
+ windows-core = "0.58"
+diff --git a/windows/hook/src/hook.rs b/windows/hook/src/hook.rs
+index fe058fd..3a1c2a0 100644
+--- a/windows/hook/src/hook.rs
++++ b/windows/hook/src/hook.rs
+@@ -1,8 +1,10 @@
+ use std::ffi::c_void;
+ 
+ use retour::static_detour;
+-use windows::core::GUID;
++use windows::core::{GUID, PCWSTR};
++use windows::Win32::Foundation::{CloseHandle, GetLastError, ERROR_ALREADY_EXISTS, HANDLE};
+ use windows::Win32::System::LibraryLoader::{GetModuleHandleA, GetProcAddress};
++use windows::Win32::System::Threading::{CreateMutexW, GetCurrentProcessId};
+ use windows_core::HRESULT;
+ 
+ use crate::proxy;
+@@ -38,30 +40,68 @@ static_detour! {
+     ) -> HRESULT;
+ }
+ 
+-/// Install the CoCreateInstance detour. Called from DllMain on DLL_PROCESS_ATTACH.
++/// Every release's copy of this DLL, from every path it ran from, can be loaded in
++/// one process at once: a copy stays loaded after its injector exits. Each copy
++/// that detoured CoCreateInstance patched over the one before, so when one
++/// unloaded, a call went through the others into its freed code (FZT-61: at
++/// Terminal crashed in `fzt_picker_hook.dll_unloaded` as fzt-picker restarted).
++/// So one copy at a time owns the detour: the one holding this process's named
++/// mutex. The others take it over from HookProc once the owner has unloaded.
++static mut OWNER: HANDLE = HANDLE(std::ptr::null_mut());
++/// Set once installing failed, so HookProc doesn't retry it on every event.
++static mut GAVE_UP: bool = false;
++
++/// Install the CoCreateInstance detour if no other copy of this DLL owns it. Called
++/// from DllMain on DLL_PROCESS_ATTACH and from HookProc.
+ ///
+ /// # Safety
+-/// Must be called under the loader lock (DllMain context). Only does memory patching
+-/// via retour — no LoadLibrary, no thread creation, no COM calls.
++/// May run under the loader lock (DllMain context). Only creates a mutex and does
++/// memory patching via retour — no LoadLibrary, no thread creation, no COM calls.
+ pub unsafe fn install() -> Result<(), Box<dyn std::error::Error>> {
+-    let module = GetModuleHandleA(windows::core::s!("combase.dll"))?;
+-    let proc = GetProcAddress(module, windows::core::s!("CoCreateInstance"))
+-        .ok_or("CoCreateInstance not found in combase.dll")?;
+-    let original: FnCoCreateInstance = std::mem::transmute(proc);
+-
+-    CoCreateInstanceDetour
+-        .initialize(original, |rclsid, punk_outer, cls_context, riid, ppv| unsafe {
+-            hooked_co_create_instance(rclsid, punk_outer, cls_context, riid, ppv)
+-        })?
+-        .enable()?;
++    if !OWNER.is_invalid() || GAVE_UP {
++        return Ok(());
++    }
++    let name: Vec<u16> = format!("Local\\fzt-picker-detour-{}", GetCurrentProcessId())
++        .encode_utf16()
++        .chain(std::iter::once(0))
++        .collect();
++    let claim = CreateMutexW(None, false, PCWSTR(name.as_ptr()))?;
++    if GetLastError() == ERROR_ALREADY_EXISTS {
++        let _ = CloseHandle(claim);
++        return Ok(());
++    }
+ 
++    let detour = || -> Result<(), Box<dyn std::error::Error>> {
++        let module = GetModuleHandleA(windows::core::s!("combase.dll"))?;
++        let proc = GetProcAddress(module, windows::core::s!("CoCreateInstance"))
++            .ok_or("CoCreateInstance not found in combase.dll")?;
++        let original: FnCoCreateInstance = std::mem::transmute(proc);
++        CoCreateInstanceDetour
++            .initialize(original, |rclsid, punk_outer, cls_context, riid, ppv| unsafe {
++                hooked_co_create_instance(rclsid, punk_outer, cls_context, riid, ppv)
++            })?
++            .enable()?;
++        Ok(())
++    };
++    if let Err(e) = detour() {
++        let _ = CloseHandle(claim);
++        GAVE_UP = true;
++        return Err(e);
++    }
++    OWNER = claim;
+     crate::log("picker: CoCreateInstance hook installed");
+     Ok(())
+ }
+ 
++/// Remove the detour if this copy owns it, and give up the claim.
+ pub fn uninstall() {
+     unsafe {
++        if OWNER.is_invalid() {
++            return;
++        }
+         let _ = CoCreateInstanceDetour.disable();
++        let _ = CloseHandle(OWNER);
++        OWNER = HANDLE(std::ptr::null_mut());
+     }
+ }
+ 
+diff --git a/windows/hook/src/lib.rs b/windows/hook/src/lib.rs
+index 079c773..f835d44 100644
+--- a/windows/hook/src/lib.rs
++++ b/windows/hook/src/lib.rs
+@@ -18,10 +18,14 @@ pub unsafe extern "system" fn SetHookHandle(handle: HHOOK) {
+     HOOK_HANDLE = handle;
+ }
+ 
+-/// CBT hook callback required by SetWindowsHookEx. Does nothing — the real work
+-/// happens in DllMain where we install the CoCreateInstance detour.
++/// CBT hook callback required by SetWindowsHookEx. The detour goes in from DllMain;
++/// here a copy that found another copy owning it takes over once that one has
++/// unloaded (hook::install).
+ #[no_mangle]
+ pub unsafe extern "system" fn HookProc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
++    if let Err(e) = hook::install() {
++        log(&format!("picker: hook install failed: {e}"));
++    }
+     CallNextHookEx(HOOK_HANDLE, code, wparam, lparam)
+ }
+ 

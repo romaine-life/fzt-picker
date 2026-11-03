@@ -1,0 +1,50 @@
+[
+  {
+    "additions": 4,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/b1d8ebe93d2aaff4d4e84931e0953457b4bc10f3/CLAUDE.md",
+    "changes": 4,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/CLAUDE.md?ref=b1d8ebe93d2aaff4d4e84931e0953457b4bc10f3",
+    "deletions": 0,
+    "filename": "CLAUDE.md",
+    "patch": "@@ -110,6 +110,10 @@ The hook DLL logs to `%TEMP%\\picker.log` with the host process PID prefix. Each\n \n ## Changelog\n \n+### 2026-10-30: Folders reached through a link\n+\n+- A symlinked or junctioned folder now shows in the picker and can be entered; before, it read as a file and a folder picker hid it. The work Mac's `/d` is one, so `--start-dir /d/repos` could not get there. fzt v0.2.83; OpenProject TMUX-21.\n+\n ### 2026-10-30: macOS build of the standalone frontend\n \n - The standalone frontend builds for macOS (arm64), released as `fzt-picker-frontend-darwin-arm64`, so the work Mac's `launch-claude` can use the real folder picker. Windows-only code moved to `_windows.go` files; macOS hides dot names and `UF_HIDDEN`. Drive roots' `Original` no longer gains a stray `\\` where the root already ends in a separator (`/`). OpenProject TMUX-21.",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/b1d8ebe93d2aaff4d4e84931e0953457b4bc10f3/CLAUDE.md",
+    "sha": "9079645b2ac485ac0d9333b8a2f941aca2cc5f08",
+    "status": "modified"
+  },
+  {
+    "additions": 1,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/b1d8ebe93d2aaff4d4e84931e0953457b4bc10f3/frontend%2Fgo.mod",
+    "changes": 2,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/frontend%2Fgo.mod?ref=b1d8ebe93d2aaff4d4e84931e0953457b4bc10f3",
+    "deletions": 1,
+    "filename": "frontend/go.mod",
+    "patch": "@@ -4,7 +4,7 @@ go 1.26.1\n \n require (\n \tgithub.com/gdamore/tcell/v2 v2.13.10\n-\tgithub.com/romaine-life/fzt v0.2.78\n+\tgithub.com/romaine-life/fzt v0.2.83\n \tgithub.com/romaine-life/fzt-terminal v0.1.109\n )\n ",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/b1d8ebe93d2aaff4d4e84931e0953457b4bc10f3/frontend%2Fgo.mod",
+    "sha": "cda65886bc977ce16df45fee519fe17d3c9ed304",
+    "status": "modified"
+  },
+  {
+    "additions": 2,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/b1d8ebe93d2aaff4d4e84931e0953457b4bc10f3/frontend%2Fgo.sum",
+    "changes": 4,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/frontend%2Fgo.sum?ref=b1d8ebe93d2aaff4d4e84931e0953457b4bc10f3",
+    "deletions": 2,
+    "filename": "frontend/go.sum",
+    "patch": "@@ -6,8 +6,8 @@ github.com/lucasb-eyer/go-colorful v1.3.0 h1:2/yBRLdWBZKrf7gB40FoiKfAWYQ0lqNcbuQ\n github.com/lucasb-eyer/go-colorful v1.3.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=\n github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=\n github.com/rivo/uniseg v0.4.7/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=\n-github.com/romaine-life/fzt v0.2.78 h1:Sp+ooiDB2Aqi0k28NB10u+aar81YryFPMYt0MBWF5AA=\n-github.com/romaine-life/fzt v0.2.78/go.mod h1:+/4sSnR4iFd8ADQWCwJublmXt9lPzlvweFJJKEbTxLw=\n+github.com/romaine-life/fzt v0.2.83 h1:DFqw2zD52FzJmTIXkhWI0V/QS4Y15WzY6iz1pTCRAgk=\n+github.com/romaine-life/fzt v0.2.83/go.mod h1:+/4sSnR4iFd8ADQWCwJublmXt9lPzlvweFJJKEbTxLw=\n github.com/romaine-life/fzt-frontend v0.1.35 h1:lZvvt4MpUD8MFhBWFmQn/0RdYLy4cHI8fjXtTf/nCaI=\n github.com/romaine-life/fzt-frontend v0.1.35/go.mod h1:XFnCbkSV+bBdki1Y69RYmQ5TD4EJYSVY5jmMcEi9HAo=\n github.com/romaine-life/fzt-terminal v0.1.109 h1:58/hApAqr4Lp7t1PdluYh+dPv6Q9vU0JHHkpG6A79x0=",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/b1d8ebe93d2aaff4d4e84931e0953457b4bc10f3/frontend%2Fgo.sum",
+    "sha": "e51212e9c966b517c5fe1929ee27b8f37dd0f264",
+    "status": "modified"
+  },
+  {
+    "additions": 26,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/b1d8ebe93d2aaff4d4e84931e0953457b4bc10f3/frontend%2Fpicker%2Fitems_test.go",
+    "changes": 26,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/frontend%2Fpicker%2Fitems_test.go?ref=b1d8ebe93d2aaff4d4e84931e0953457b4bc10f3",
+    "deletions": 0,
+    "filename": "frontend/picker/items_test.go",
+    "patch": "@@ -25,6 +25,32 @@ func TestDriveRootsOriginalIsOpenableRoot(t *testing.T) {\n \t}\n }\n \n+// The work Mac's /d is a symlink; the folder picker must show it and go in.\n+func TestFoldersOnlyKeepsLinkedFolders(t *testing.T) {\n+\tdir := t.TempDir()\n+\tif err := os.MkdirAll(filepath.Join(dir, \"real\", \"repos\"), 0o755); err != nil {\n+\t\tt.Fatal(err)\n+\t}\n+\tif err := os.Symlink(filepath.Join(dir, \"real\"), filepath.Join(dir, \"d\")); err != nil {\n+\t\tt.Skipf(\"symlinks unavailable here: %v\", err)\n+\t}\n+\n+\tp := NewDirProvider(true)\n+\tvar linked bool\n+\tfor _, it := range p.LoadChildren(dir) {\n+\t\tif it.Fields[0] == \"d\" \u0026\u0026 it.HasChildren {\n+\t\t\tlinked = true\n+\t\t}\n+\t}\n+\tif !linked {\n+\t\tt.Fatal(\"folder reached through a link is missing from a folders-only listing\")\n+\t}\n+\tinside := p.LoadChildren(filepath.Join(dir, \"d\"))\n+\tif len(inside) != 1 || inside[0].Original != filepath.Join(dir, \"d\", \"repos\") {\n+\t\tt.Fatalf(\"inside the link: got %v, want d/repos\", inside)\n+\t}\n+}\n+\n func TestLoadChildrenFoldersOnlyAndFullPaths(t *testing.T) {\n \tdir := t.TempDir()\n \tif err := os.Mkdir(filepath.Join(dir, \"sub\"), 0o755); err != nil {",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/b1d8ebe93d2aaff4d4e84931e0953457b4bc10f3/frontend%2Fpicker%2Fitems_test.go",
+    "sha": "d5052649d22c570843998357ca9a11ba2606ab3b",
+    "status": "modified"
+  }
+]

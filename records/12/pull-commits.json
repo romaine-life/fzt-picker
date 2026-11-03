@@ -1,0 +1,44 @@
+[
+  {
+    "author": null,
+    "comments_url": "https://api.github.com/repos/romaine-life/fzt-picker/commits/ec4b4f19f1c7afc5702c42f53eb19d787c38ca56/comments",
+    "commit": {
+      "author": {
+        "date": "2026-10-31T06:04:30Z",
+        "email": "fullnelsongrip@gmail.com",
+        "name": "nelsong6"
+      },
+      "comment_count": 0,
+      "committer": {
+        "date": "2026-10-31T06:04:30Z",
+        "email": "fullnelsongrip@gmail.com",
+        "name": "nelsong6"
+      },
+      "message": "One copy of the hook DLL per process detours CoCreateInstance, so a copy unloading no longer crashes the host (FZT-61)",
+      "tree": {
+        "sha": "b6bbf5088392f683c2f8abfd812cd45fa6073178",
+        "url": "https://api.github.com/repos/romaine-life/fzt-picker/git/trees/b6bbf5088392f683c2f8abfd812cd45fa6073178"
+      },
+      "url": "https://api.github.com/repos/romaine-life/fzt-picker/git/commits/ec4b4f19f1c7afc5702c42f53eb19d787c38ca56",
+      "verification": {
+        "payload": null,
+        "reason": "unsigned",
+        "signature": null,
+        "verified": false,
+        "verified_at": null
+      }
+    },
+    "committer": null,
+    "html_url": "https://github.com/romaine-life/fzt-picker/commit/ec4b4f19f1c7afc5702c42f53eb19d787c38ca56",
+    "node_id": "C_kwDOR7WrXdoAKGVjNGI0ZjE5ZjFjN2FmYzU3MDJjNDJmNTNlYjE5ZDc4N2MzOGNhNTY",
+    "parents": [
+      {
+        "html_url": "https://github.com/romaine-life/fzt-picker/commit/cd2d2f34363bb2f64c504e90200fc1f490e0f89a",
+        "sha": "cd2d2f34363bb2f64c504e90200fc1f490e0f89a",
+        "url": "https://api.github.com/repos/romaine-life/fzt-picker/commits/cd2d2f34363bb2f64c504e90200fc1f490e0f89a"
+      }
+    ],
+    "sha": "ec4b4f19f1c7afc5702c42f53eb19d787c38ca56",
+    "url": "https://api.github.com/repos/romaine-life/fzt-picker/commits/ec4b4f19f1c7afc5702c42f53eb19d787c38ca56"
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "additions": 1,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/c34f5692f1f7c6756146bc3e653e3e47af441f92/.github%2Fworkflows%2Fdispatch.yml",
+    "changes": 2,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/.github%2Fworkflows%2Fdispatch.yml?ref=c34f5692f1f7c6756146bc3e653e3e47af441f92",
+    "deletions": 1,
+    "filename": ".github/workflows/dispatch.yml",
+    "patch": "@@ -23,7 +23,7 @@ concurrency:\n \n jobs:\n   update:\n-    uses: nelsong6/pipeline-templates/.github/workflows/go-dependency-update-template.yml@main\n+    uses: romaine-life/pipeline-templates/.github/workflows/go-dependency-update-template.yml@main\n     with:\n       go-mod-path: frontend\n       modules: github.com/nelsong6/fzt github.com/nelsong6/fzt-terminal",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/c34f5692f1f7c6756146bc3e653e3e47af441f92/.github%2Fworkflows%2Fdispatch.yml",
+    "sha": "9b4942b67f382782ebc4f22a905ced7208625a7c",
+    "status": "modified"
+  },
+  {
+    "additions": 1,
+    "blob_url": "https://github.com/romaine-life/fzt-picker/blob/c34f5692f1f7c6756146bc3e653e3e47af441f92/.github%2Fworkflows%2Frelease.yml",
+    "changes": 2,
+    "contents_url": "https://api.github.com/repos/romaine-life/fzt-picker/contents/.github%2Fworkflows%2Frelease.yml?ref=c34f5692f1f7c6756146bc3e653e3e47af441f92",
+    "deletions": 1,
+    "filename": ".github/workflows/release.yml",
+    "patch": "@@ -17,6 +17,6 @@ permissions:\n \n jobs:\n   release:\n-    uses: nelsong6/pipeline-templates/.github/workflows/release-and-dispatch-template.yml@main\n+    uses: romaine-life/pipeline-templates/.github/workflows/release-and-dispatch-template.yml@main\n     with:\n       artifact-build-workflow: build.yml",
+    "raw_url": "https://github.com/romaine-life/fzt-picker/raw/c34f5692f1f7c6756146bc3e653e3e47af441f92/.github%2Fworkflows%2Frelease.yml",
+    "sha": "bea7e0ee2a787b90539f7e86079d1accc7c4293a",
+    "status": "modified"
+  }
+]
