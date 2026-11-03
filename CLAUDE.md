@@ -89,11 +89,11 @@ go build -o fzt-picker-frontend.exe .
 GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o fzt-picker-frontend-darwin-arm64 .
 ```
 
-CI (`build.yml`) builds both on every pull request; its `build-macos` job runs vet and `go test ./picker` natively on `macos-latest` and adds `fzt-picker-frontend-darwin-arm64` to each release.
+CI runs on Forgejo (`.forgejo/workflows/build.yml`) on every pull request and main push. Its `windows` job builds, checks imports, vets, tests and signs on upstairspc (host mode: rustup nightly, the machine's Go and WinLibs gcc). The macOS build runs on GitHub from the push mirror (`.github/workflows/macos.yml`, vet and `go test ./picker` on `macos-latest`); Forgejo's `macos` job waits for that run, and on a release adds `fzt-picker-frontend-darwin-arm64` to the Forgejo release.
 
 ## Running
 
-`publish.ps1` publishes the latest GitHub release (all four Windows binaries in one folder) to `\\NelsonNAS\tools\fzt-picker\<tag>\`; cut a release first (`gh workflow run release.yml -R romaine-life/fzt-picker`). The home shell puts the current version's folder on PATH, so `fzt-picker-frontend` resolves to it. The `fzt-picker` command ([romaine-life/at](https://github.com/romaine-life/at) `commands/fzt-picker.ps1`) restarts the tray injector on the current version; the Startup-folder shortcut that home-sync (shell-config-profile-home `machine/apply.ps1`) writes runs it at sign-in. Shows as a system tray icon — right-click to exit.
+`publish.ps1` publishes the latest Forgejo release (all four Windows binaries in one folder) to `\\NelsonNAS\tools\fzt-picker\<tag>\`; cut a release first with Forgejo's "Run workflow" on `release.yml`, or `POST https://forgejo.romaine.life/api/v1/repos/romaine-life/fzt-picker/actions/workflows/release.yml/dispatches` with `{"ref":"main"}`. The home shell puts the current version's folder on PATH, so `fzt-picker-frontend` resolves to it. The `fzt-picker` command ([romaine-life/at](https://github.com/romaine-life/at) `commands/fzt-picker.ps1`) restarts the tray injector on the current version; the Startup-folder shortcut that home-sync (shell-config-profile-home `machine/apply.ps1`) writes runs it at sign-in. Shows as a system tray icon — right-click to exit.
 
 ```sh
 # Standalone folder picker (used by the 'explore' at-command)

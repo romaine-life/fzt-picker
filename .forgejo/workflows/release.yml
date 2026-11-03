@@ -1,0 +1,20 @@
+name: Release
+
+# Cut by hand: Forgejo's "Run workflow" on this workflow, or
+#   POST /api/v1/repos/romaine-life/fzt-picker/actions/workflows/release.yml/dispatches {"ref":"main"}
+# The template tags main's HEAD with the next v0.1.N, runs build.yml with
+# that tag to build and upload the assets, and syncs the GitHub push mirror.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: release-tag
+  cancel-in-progress: false
+
+jobs:
+  release:
+    uses: romaine-life/pipeline-templates/.forgejo/workflows/release-and-dispatch-template.yml@main
+    secrets: inherit
+    with:
+      artifact-build-workflow: build.yml
