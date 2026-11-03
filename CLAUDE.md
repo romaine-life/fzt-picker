@@ -93,7 +93,7 @@ CI runs on Forgejo (`.forgejo/workflows/build.yml`) on every pull request and ma
 
 ## Running
 
-`publish.ps1` publishes the latest Forgejo release (all four Windows binaries in one folder) to `\\NelsonNAS\tools\fzt-picker\<tag>\`; cut a release first with Forgejo's "Run workflow" on `release.yml`, or `POST https://forgejo.romaine.life/api/v1/repos/romaine-life/fzt-picker/actions/workflows/release.yml/dispatches` with `{"ref":"main"}`. The home shell puts the current version's folder on PATH, so `fzt-picker-frontend` resolves to it. The `fzt-picker` command ([romaine-life/at](https://github.com/romaine-life/at) `commands/fzt-picker.ps1`) restarts the tray injector on the current version; the Startup-folder shortcut that home-sync (shell-config-profile-home `machine/apply.ps1`) writes runs it at sign-in. Shows as a system tray icon — right-click to exit.
+After a complete Forgejo release, CI starts home-sync on every PC. It verifies all four signed Windows binaries, switches C:\Program Files\at-home\fzt-picker\current, and reconciles the tray injector and sign-in shortcut. Cut a release through Forgejo release.yml; the manual publish.ps1 was retired by HOMECFG-110.
 
 ```sh
 # Standalone folder picker (used by the 'explore' at-command)
@@ -102,7 +102,7 @@ fzt-picker-frontend --folders-only
 
 ## Development workflow
 
-The hook DLL loads into every GUI process and the frontend DLL into every process that opened a dialog, so neither can be replaced while those run. Each published version is its own folder, so nothing is replaced: publish, then run `fzt-picker` to restart the injector on the new version. New processes get the new DLLs; old processes keep the old ones until they restart.
+The hook DLL loads into every GUI process and the frontend DLL into every process that opened a dialog, so neither can be replaced while those run. Each published version is its own folder, so nothing is replaced: CI publishes the release and home-sync restarts the injector on the new version. New processes get the new DLLs; old processes keep the old ones until they restart.
 
 ## Logging
 
