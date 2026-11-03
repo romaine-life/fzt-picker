@@ -89,19 +89,17 @@ jobs:
           Get-ChildItem dist | Format-Table Name, Length
 
       # The hook loads fzt_picker_frontend.dll into every process that opens a
-      # file dialog, so no binary may need a MinGW runtime DLL (libwinpthread,
-      # libgcc_s) beside it.
+      # file dialog, so it may not need a MinGW runtime DLL (libwinpthread,
+      # libgcc_s) beside it. It is the only binary gcc links.
       - name: Runtime imports
         run: |
-          foreach ($f in Get-ChildItem dist) {
-            $out = objdump -p $f.FullName
-            if ($LASTEXITCODE) { throw "objdump failed on $($f.Name)" }
-            $dlls = @($out | Select-String 'DLL Name: (\S+)' | ForEach-Object { $_.Matches[0].Groups[1].Value })
-            if (-not $dlls) { throw "found no imports in $($f.Name)" }
-            "$($f.Name): $($dlls -join ', ')"
-            $bad = @($dlls | Where-Object { $_ -like 'lib*.dll' })
-            if ($bad) { throw "$($f.Name) needs $($bad -join ', ')" }
-          }
+          $out = objdump -p dist/fzt_picker_frontend.dll
+          if ($LASTEXITCODE) { throw 'objdump failed' }
+          $dlls = @($out | Select-String 'DLL Name: (\S+)' | ForEach-Object { $_.Matches[0].Groups[1].Value })
+          if (-not $dlls) { throw 'found no imports in fzt_picker_frontend.dll' }
+          "fzt_picker_frontend.dll: $($dlls -join ', ')"
+          $bad = @($dlls | Where-Object { $_ -like 'lib*.dll' })
+          if ($bad) { throw "fzt_picker_frontend.dll needs $($bad -join ', ')" }
 
       # Defender quarantined an unsigned tmux build as Program:Win32/Contebrew.A!ml
       # and passed the same build signed (TMUX-30). The certificate is at
