@@ -1,10 +1,15 @@
 # fzt-picker
 
-Replaces the Windows file picker dialog (IFileOpenDialog) with fzt's fuzzy finder TUI. When any app opens File > Open, a fzt tree view appears instead of the standard dialog.
+fzt's fuzzy finder as a file picker, in two forms:
+
+- **Windows dialog hook:** replaces the Windows file picker dialog (IFileOpenDialog). When any app opens File > Open, a fzt tree view appears instead of the standard dialog. Windows only.
+- **Standalone frontend:** a terminal picker in `frontend/`, on Windows (the `explore` at-command) and macOS (the work Mac's `launch-claude` runs it in a tmux pane).
+
+Forgejo is the source: https://forgejo.romaine.life/romaine-life/fzt-picker. GitHub's `romaine-life/fzt-picker` is its push mirror, so a branch pushed there is overwritten, and a machine that can't reach Forgejo can't land a change here.
 
 ## Architecture
 
-Two layers:
+The Windows dialog hook has two layers:
 
 - **COM hook (Rust, `windows/`)**: Hook DLL + injector. Intercepts `CoCreateInstance` for `IFileOpenDialog` via `retour` detours. Returns a COM proxy implementing `IFileOpenDialog`, `IFileDialog`, `IFileDialog2`, and `IFileDialogCustomize`. When `Show()` is called, loads the Go CGo DLL in-process and calls `PickFile()`.
 - **Frontend (Go, `frontend/cgo/`)**: CGo DLL (`fzt_picker_frontend.dll`) loaded in-process by the hook DLL. Creates a visible Win32 window owned by the host app, runs a headless fzt session (`tui.NewTreeSession`), renders via GDI `ExtTextOutW`, and runs a proper modal message loop (`GetMessage`/`DispatchMessage`). Uses `DirProvider` for lazy directory loading.
