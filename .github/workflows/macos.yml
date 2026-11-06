@@ -1,7 +1,7 @@
 # The standalone frontend for the work Mac (launch-claude in a tmux pane).
 #
 # The rest of CI runs on Forgejo (.forgejo/workflows/build.yml). This runs on
-# GitHub from Forgejo's push mirror; Forgejo's macos job waits for it and adds
+# GitHub; Forgejo's macos job waits for it and adds
 # its build to the Forgejo release. A release tag also gets a GitHub release
 # holding the macOS build, for machines that can't reach Forgejo.
 name: macOS

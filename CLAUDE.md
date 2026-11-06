@@ -5,7 +5,7 @@ fzt's fuzzy finder as a file picker, in two forms:
 - **Windows dialog hook:** replaces the Windows file picker dialog (IFileOpenDialog). When any app opens File > Open, a fzt tree view appears instead of the standard dialog. Windows only.
 - **Standalone frontend:** a terminal picker in `frontend/`, on Windows (the `explore` at-command) and macOS (the work Mac's `launch-claude` runs it in a tmux pane).
 
-Forgejo is the source: https://forgejo.romaine.life/romaine-life/fzt-picker. GitHub's `romaine-life/fzt-picker` is its push mirror, so a branch pushed there is overwritten, and a machine that can't reach Forgejo can't land a change here.
+For development on the work laptop, use https://github.com/romaine-life/fzt-picker for source, branches and pull requests. Build and install the Linux picker locally; its binary stays on the laptop.
 
 ## Architecture
 
@@ -94,7 +94,7 @@ go build -o fzt-picker-frontend.exe .
 GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o fzt-picker-frontend-darwin-arm64 .
 ```
 
-CI runs on Forgejo (`.forgejo/workflows/build.yml`) on every pull request and main push. Its `windows` job builds, checks imports, vets, tests and signs on upstairspc (host mode: rustup nightly, the machine's Go and WinLibs gcc). The macOS build runs on GitHub from the push mirror (`.github/workflows/macos.yml`, vet and `go test ./picker` on `macos-latest`); Forgejo's `macos` job waits for that run, and on a release adds `fzt-picker-frontend-darwin-arm64` to the Forgejo release.
+CI runs on Forgejo (`.forgejo/workflows/build.yml`) on every pull request and main push. Its `windows` job builds, checks imports, vets, tests and signs on upstairspc (host mode: rustup nightly, the machine's Go and WinLibs gcc). The macOS build runs on GitHub (`.github/workflows/macos.yml`, vet and `go test ./picker` on `macos-latest`); Forgejo's `macos` job waits for that run, and on a release adds `fzt-picker-frontend-darwin-arm64` to the Forgejo release.
 
 ## Running
 
