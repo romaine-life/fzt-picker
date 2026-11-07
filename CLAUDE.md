@@ -119,6 +119,8 @@ GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o fzt-picker-frontend-darwin-ar
 
 CI runs on Forgejo (`.forgejo/workflows/build.yml`) on every pull request and main push. Its `windows` job builds, checks imports, vets, tests and signs on upstairspc (host mode: rustup nightly, the machine's Go and WinLibs gcc). The macOS build runs on GitHub from the push mirror (`.github/workflows/macos.yml`, vet and `go test ./picker` on `macos-latest`); Forgejo's `macos` job waits for that run, and on a release adds `fzt-picker-frontend-darwin-arm64` to the Forgejo release.
 
+Testing, including the file dialog on a hidden desktop so nothing reaches the screen: [TESTING.md](TESTING.md).
+
 ## Running
 
 After a complete Forgejo release, CI starts home-sync on every PC. It verifies all five signed Windows binaries, switches C:\Program Files\at-home\fzt-picker\current, and reconciles the tray injector and sign-in shortcut. Cut a release through Forgejo release.yml; the manual publish.ps1 was retired by HOMECFG-110.
