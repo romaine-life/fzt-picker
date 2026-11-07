@@ -1,9 +1,10 @@
 # fzt-picker
 
-fzt's fuzzy finder as a file picker, in two forms:
+fzt's fuzzy finder as a file picker, in two forms, plus `fzt-files`, a file manager built from the same pieces:
 
 - **Windows dialog hook:** replaces the Windows file picker dialog (IFileOpenDialog). When any app opens File > Open, a fzt tree view appears instead of the standard dialog. Windows only.
 - **Standalone frontend:** a terminal picker in `frontend/`, on Windows (the `explore` at-command) and macOS (the work Mac's `launch-claude` runs it in a tmux pane).
+- **`fzt-files`:** file management by chained command palettes, in `frontend/fzt-files/`. Windows only. See [fzt-files](#fzt-files).
 
 Forgejo is the source: https://forgejo.romaine.life/romaine-life/fzt-picker. GitHub's `romaine-life/fzt-picker` is its push mirror, so a branch pushed there is overwritten, and a machine that can't reach Forgejo can't land a change here.
 
@@ -55,6 +56,25 @@ When an app sets `FOS_PICKFOLDERS` (e.g. Electron's `dialog.showOpenDialog({ pro
 
 Both the COM hook path and standalone binary use the same DirProvider and config, so behavior is identical. The standalone binary accepts `--folders-only` to enable this mode.
 
+## fzt-files
+
+Pick a command from a list, then fzt asks for each thing it needs, so there are no keys to memorize. Choosing is always command first: a file found on its own has nothing to be returned to, so there is no file-first mode.
+
+Each `command` in `flow.go` is its blanks (a file, a folder, typed text, or a confirmation) and what it runs once they're filled. The chooser for each blank takes over the screen, and the title is the sentence so far: `move take.wav to ▌`. Escape takes the last word back, from any folder, and leaves the command after the first; a query is cleared first. `tui.RunLoop` keeps it on one screen, with `Live.Show` for each step and `Live.Ask` for the text box. A command's file and folder forms are separate rows because each uses the picker whose Enter does the obvious thing: in a file picker it opens a folder, in a folder picker it picks one.
+
+| Command | Blanks |
+| --- | --- |
+| `rename file`, `rename folder` | what, new name (selected up to the extension, as with F2 in Explorer) |
+| `move file`, `move folder`, `copy file`, `copy folder` | what, destination folder |
+| `delete file`, `delete folder` | what, confirmation |
+| `new folder` | where, name |
+
+`fzt-files rename <path>` (also `move`, `copy`, `delete`, and `new-folder [<in>]`) skips the list and fills the first blank, which is how another app gives a single key to a command: it prints the new path and exits 0, or exits 130 on Escape. `--start-dir <folder>` opens the pickers there; otherwise they start in the working folder, then in the last folder used.
+
+Files are never replaced: `moveFile` is `MoveFileEx` with no replace flag, and a copy is written to `<name>.fzt-files-part`, then named. Stopping or failing removes the part, and a move between drives removes its source only after the copy is complete. Escape stops a running copy. Delete uses the Recycle Bin (`SHFileOperationW`, which shows its own dialog in the one case it would otherwise destroy an item silently, too big for the bin). On a network or removable drive there is no bin, and the confirmation row says it can't be undone. A failure shows in the panel and asks the last blank again.
+
+Log: `%LOCALAPPDATA%\fzt-files\fzt-files.log`, through `log-search --app fzt-files`. It's copied to the NAS, so a line holds what happened and never a path or a name. `FZT_FILES_DATA` moves it for a test run. Testing: [TESTING.md](TESTING.md).
+
 ## Dependencies
 
 - **fzt / fzt-terminal**: Headless session, style constants, DirProvider for lazy directory loading.
@@ -90,6 +110,9 @@ CGO_ENABLED=1 go build -buildmode=c-shared -o fzt_picker_frontend.dll .
 cd frontend
 go build -o fzt-picker-frontend.exe .
 
+# Go (fzt-files)
+go build -o fzt-files.exe ./fzt-files
+
 # Go (standalone frontend for the work Mac)
 GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o fzt-picker-frontend-darwin-arm64 .
 ```
@@ -98,11 +121,14 @@ CI runs on Forgejo (`.forgejo/workflows/build.yml`) on every pull request and ma
 
 ## Running
 
-After a complete Forgejo release, CI starts home-sync on every PC. It verifies all four signed Windows binaries, switches C:\Program Files\at-home\fzt-picker\current, and reconciles the tray injector and sign-in shortcut. Cut a release through Forgejo release.yml; the manual publish.ps1 was retired by HOMECFG-110.
+After a complete Forgejo release, CI starts home-sync on every PC. It verifies all five signed Windows binaries, switches C:\Program Files\at-home\fzt-picker\current, and reconciles the tray injector and sign-in shortcut. Cut a release through Forgejo release.yml; the manual publish.ps1 was retired by HOMECFG-110.
 
 ```sh
 # Standalone folder picker (used by the 'explore' at-command)
 fzt-picker-frontend --folders-only
+
+# File manager (in the at menu as "manage files")
+fzt-files
 ```
 
 ## Development workflow
@@ -175,3 +201,4 @@ The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each 
 - **IFileSaveDialog**: Detected but passes through to standard dialog
 - **No fallback**: If frontend DLL fails to load, the dialog fails with ERROR_CANCELLED
 - **Multi-select**: Only returns the first selected item
+- **fzt-files**: One file at a time, no previews, and copying a folder that holds a link is refused

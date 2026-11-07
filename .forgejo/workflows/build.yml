@@ -69,17 +69,26 @@ jobs:
 
       - name: Vet
         working-directory: frontend
-        run: go vet . ./picker
+        run: go vet . ./picker ./fzt-files
 
       - name: Test
         working-directory: frontend
-        run: go test ./picker
+        run: go test ./picker ./fzt-files
 
       - name: Build standalone frontend
         working-directory: frontend
         env:
           CGO_ENABLED: "0"
         run: go build -o fzt-picker-frontend.exe .
+
+      - name: Build fzt-files
+        working-directory: frontend
+        env:
+          CGO_ENABLED: "0"
+          VERSION: ${{ inputs.tag || github.sha }}
+        run: |
+          $built = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+          go build -trimpath -ldflags "-X main.version=$env:VERSION -X main.buildRepo=$env:GITHUB_REPOSITORY -X main.buildServer=$env:GITHUB_SERVER_URL -X main.buildTime=$built" -o fzt-files.exe ./fzt-files
 
       - name: Collect
         run: |
@@ -88,7 +97,7 @@ jobs:
           foreach ($f in 'fzt_picker_hook.dll', 'fzt-picker.exe', 'test-trigger.exe') {
             Copy-Item "$env:CARGO_TARGET_DIR\release\$f" dist
           }
-          Copy-Item frontend/fzt_picker_frontend.dll, frontend/fzt-picker-frontend.exe dist
+          Copy-Item frontend/fzt_picker_frontend.dll, frontend/fzt-picker-frontend.exe, frontend/fzt-files.exe dist
           Get-ChildItem dist | Format-Table Name, Length
 
       # The hook loads fzt_picker_frontend.dll into every process that opens a
