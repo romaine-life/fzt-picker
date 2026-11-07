@@ -131,8 +131,13 @@ unsafe extern "system" fn tray_wnd_proc(
     }
 }
 
+/// The hook DLL beside this exe, by its real path. The exe starts through the
+/// `current` junction, and a DLL loaded through it has the same name in every
+/// release: a process that already holds an older copy is handed that copy again,
+/// so it never takes the new hook (FP-6). By its version folder, each release's
+/// copy is its own module, and the older one unloads and hands over (hook::install).
 fn find_hook_dll() -> Result<String, Box<dyn std::error::Error>> {
-    let exe_dir = std::env::current_exe()?
+    let exe_dir = real_path(&std::env::current_exe()?)?
         .parent()
         .ok_or("no parent dir")?
         .to_path_buf();
@@ -143,4 +148,42 @@ fn find_hook_dll() -> Result<String, Box<dyn std::error::Error>> {
     }
 
     Err(format!("fzt_picker_hook.dll not found (looked in {})", exe_dir.display()).into())
+}
+
+/// path with every junction and link resolved, without the `\\?\` prefix.
+fn real_path(path: &std::path::Path) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
+    let resolved = std::fs::canonicalize(path)?;
+    let text = resolved.to_string_lossy();
+    Ok(match text.strip_prefix(r"\\?\UNC\") {
+        Some(rest) => std::path::PathBuf::from(format!(r"\\{rest}")),
+        None => std::path::PathBuf::from(text.strip_prefix(r"\\?\").unwrap_or(&text)),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn real_path_follows_a_junction_and_drops_the_prefix() {
+        let root = std::env::temp_dir().join(format!("fzt-picker-real-path-{}", std::process::id()));
+        let version = root.join("v1");
+        let current = root.join("current");
+        std::fs::create_dir_all(&version).unwrap();
+        let made = std::process::Command::new("cmd")
+            .args(["/c", "mklink", "/J"])
+            .arg(&current)
+            .arg(&version)
+            .output()
+            .unwrap();
+        assert!(made.status.success(), "{made:?}");
+        std::fs::write(version.join("fzt-picker.exe"), b"").unwrap();
+        let got = real_path(&current.join("fzt-picker.exe")).unwrap();
+        let want = real_path(&version.join("fzt-picker.exe")).unwrap();
+        let _ = std::fs::remove_dir(&current);
+        let _ = std::fs::remove_dir_all(&root);
+        assert_eq!(got, want);
+        assert!(got.ends_with(r"v1\fzt-picker.exe"), "{}", got.display());
+        assert!(!got.to_string_lossy().starts_with(r"\\?\"), "{}", got.display());
+    }
 }

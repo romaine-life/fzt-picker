@@ -122,6 +122,34 @@ done
 is the last line of `%TEMP%\picker.log`. That is how FP-5 showed up: every hooked File > Open
 was cancelling, because the hook looked for the dialog DLL in a folder releases no longer use.
 
+### A release under a running app
+
+`swap_test.py` checks that a running app moves to a new release's hook without restarting.
+It lays out `v1`, `v2` and a `current` junction as home-sync does, starts the injector
+through `current`, and runs `test-trigger --repeat`, which opens a dialog every five seconds
+and makes windows in between as an app does. After the first dialog it swaps `current` to
+`v2` and restarts the injector. The hook logs the folder it looked in, so `swap.json` lists
+which release answered each dialog: it should be `v1`, then `v2`, `v2`.
+
+```sh
+cd windows && cargo build -j 4 --release && cd ..
+python=$(python -c "import sys;print(sys.executable)")
+build=$(cygpath -w "$PWD/windows/target/release")
+mkdir /d/workspace/fp-qa
+python tools/hidden-desktop/hidden_launch.py "fp-swap-$$" "\"$python\" $(cygpath -w "$PWD/tools/hidden-desktop/swap_test.py") D:\\workspace\\fp-qa \"$build\" \"$build\\test-trigger.exe\""
+cat /d/workspace/fp-qa/swap.json
+```
+
+An error goes to `swap-error.txt` in the same folder. Before FP-6 the injector loaded the hook
+through `current`, every release's copy had that one name, and the answer was the first copy
+an app ever loaded, for as long as the app ran.
+
+### On the live PC
+
+`python tools/hook_versions.py` reads which release's hook each running process holds, and
+changes nothing. After a release, every process should move to the new version as soon as
+its windows next do anything.
+
 This tests the installed injector, hook and dialog DLL. To test a local hook, add the folder
 holding its `fzt-picker.exe` as a fifth argument. The dialog DLL has to be beside the hook,
 and only CI can build it (it needs the runner's gcc), so locally the hook can only prove that
