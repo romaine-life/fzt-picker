@@ -59,6 +59,10 @@ jobs:
           rustc --version
           cargo build --release
 
+      - name: Test the hook
+        working-directory: windows
+        run: cargo test -p fzt-picker-hook
+
       # ── Go (CGo DLL + standalone frontend) ─────────────────────
       - name: Build CGo DLL
         working-directory: frontend

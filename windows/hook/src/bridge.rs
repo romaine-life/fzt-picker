@@ -1,8 +1,12 @@
 use std::ffi::{CStr, CString};
-use std::path::Path;
+use std::path::PathBuf;
 
-use windows::Win32::Foundation::HWND;
-use windows::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW};
+use windows::core::PCWSTR;
+use windows::Win32::Foundation::{HMODULE, HWND};
+use windows::Win32::System::LibraryLoader::{
+    GetModuleFileNameW, GetModuleHandleExW, GetProcAddress, LoadLibraryW,
+    GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+};
 
 /// Call the Go picker frontend DLL in-process.
 /// The DLL creates a Win32 window for modal state, spawns the frontend
@@ -68,20 +72,51 @@ pub fn run_picker(
     }
 }
 
+/// The frontend DLL is installed beside this hook DLL: a release puts both in one
+/// version folder, and nothing else is looked at.
 fn find_picker_dll() -> Result<String, Box<dyn std::error::Error>> {
-    if let Ok(userprofile) = std::env::var("USERPROFILE") {
-        let candidate = Path::new(&userprofile)
-            .join("bin")
-            .join("fzt_picker_frontend.dll");
-        if candidate.exists() {
-            return Ok(candidate.to_string_lossy().to_string());
-        }
+    let dir = own_folder()?;
+    let candidate = dir.join("fzt_picker_frontend.dll");
+    if !candidate.exists() {
+        return Err(format!("fzt_picker_frontend.dll is not beside the hook in {}", dir.display()).into());
+    }
+    Ok(candidate.to_string_lossy().to_string())
+}
+
+/// The folder of the module this code was loaded from: the hook DLL in an app, the
+/// test binary under cargo test.
+fn own_folder() -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let mut module = HMODULE::default();
+    let mut buffer = vec![0u16; 32768];
+    let length = unsafe {
+        GetModuleHandleExW(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            PCWSTR(own_folder as *const () as *const u16),
+            &mut module,
+        )?;
+        GetModuleFileNameW(module, &mut buffer)
+    };
+    if length == 0 {
+        return Err("couldn't read the hook DLL's own path".into());
+    }
+    let path = PathBuf::from(String::from_utf16_lossy(&buffer[..length as usize]));
+    Ok(path.parent().ok_or("the hook DLL's path has no folder")?.to_path_buf())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn own_folder_is_the_loaded_module_folder() {
+        let exe = std::env::current_exe().unwrap();
+        assert_eq!(own_folder().unwrap(), exe.parent().unwrap());
     }
 
-    let dev = "D:\\repos\\fzt-picker\\frontend\\cgo\\fzt_picker_frontend.dll";
-    if Path::new(dev).exists() {
-        return Ok(dev.to_string());
+    #[test]
+    fn a_missing_frontend_names_the_folder_it_looked_in() {
+        let err = find_picker_dll().unwrap_err().to_string();
+        let exe = std::env::current_exe().unwrap();
+        assert!(err.contains(&exe.parent().unwrap().display().to_string()), "{err}");
     }
-
-    Err("fzt_picker_frontend.dll not found".into())
 }

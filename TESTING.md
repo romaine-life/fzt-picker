@@ -10,6 +10,7 @@ is about.
 | --- | --- |
 | `frontend/fzt-files` | [fzt-files](#fzt-files), then its real terminal check |
 | `frontend/cgo`, or a library bump | [The file dialog](#the-file-dialog) |
+| `windows/` | [The hook](#the-hook), after `cargo test -j 4 -p fzt-picker-hook` |
 | `frontend/main.go`, `frontend/picker`, or a library bump | [The terminal picker](#the-terminal-picker) |
 
 Work in a worktree under `D:\workspace\fzt-picker\<branch>`. This is a gaming PC, so keep
@@ -94,9 +95,37 @@ done
 
 Read `file-typed.png` in the same folder: it shows the list, the match and the highlight.
 
-A global hook only reaches its own desktop, so this tests the DLL, not the COM hook. Running
-the injector and `test-trigger.exe` (`cargo build -j 4`) on one hidden desktop should cover a
-change under `windows/`, but that hasn't been tried yet.
+This tests the DLL alone. The hook decides whether it runs at all, so after a release run
+[the hook](#the-hook) too.
+
+## The hook
+
+`hook_test.py` starts an injector and `test-trigger.exe` on a hidden desktop. A global hook
+reaches only its own desktop, so this injector can't touch Nelson's apps or his running
+injector, and only the one it started is stopped. `test-trigger` opens the system file
+dialog, the hook swaps in fzt's, and the script walks it down from the drive roots by name
+and reports what came back.
+
+```sh
+cd windows && cargo build -j 4 --release && cd ..
+python=$(python -c "import sys;print(sys.executable)")
+trigger=$(cygpath -w "$PWD/windows/target/release/test-trigger.exe")
+mkdir /d/workspace/fp-qa
+for s in file folder cancel; do
+  python tools/hidden-desktop/hidden_launch.py "fp-hook-$s-$$" "\"$python\" $(cygpath -w "$PWD/tools/hidden-desktop/hook_test.py") D:\\workspace\\fp-qa $s \"$trigger\""
+  cat /d/workspace/fp-qa/hook-$s.json
+done
+```
+
+`file` and `folder` should end with `selected file:` and the path, and `cancel` with
+`cancelled`. With `dialog shown` false, the hook gave up before drawing anything: its reason
+is the last line of `%TEMP%\picker.log`. That is how FP-5 showed up: every hooked File > Open
+was cancelling, because the hook looked for the dialog DLL in a folder releases no longer use.
+
+This tests the installed injector, hook and dialog DLL. To test a local hook, add the folder
+holding its `fzt-picker.exe` as a fifth argument. The dialog DLL has to be beside the hook,
+and only CI can build it (it needs the runner's gcc), so locally the hook can only prove that
+it looked in its own folder: `picker.log` names that folder.
 
 ## The terminal picker
 
