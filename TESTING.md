@@ -103,8 +103,8 @@ This tests the DLL alone. The hook decides whether it runs at all, so after a re
 `hook_test.py` starts an injector and `test-trigger.exe` on a hidden desktop. A global hook
 reaches only its own desktop, so this injector can't touch Nelson's apps or his running
 injector, and only the one it started is stopped. `test-trigger` opens the system file
-dialog, the hook swaps in fzt's, and the script walks it down from the drive roots by name
-and reports what came back.
+dialog, the hook swaps in fzt's, opened in the user folder, and the script goes up to the
+drive roots with Left, walks down by name and reports what came back.
 
 ```sh
 cd windows && cargo build -j 4 --release && cd ..

@@ -21,7 +21,7 @@ from ctypes import wintypes
 
 INSTALLED = r"C:\Program Files\at-home\fzt-picker\current"
 WM_KEYDOWN, WM_CHAR = 0x0100, 0x0102
-VK_RETURN, VK_ESCAPE, VK_RIGHT = 0x0D, 0x1B, 0x27
+VK_RETURN, VK_ESCAPE, VK_LEFT, VK_RIGHT = 0x0D, 0x1B, 0x25, 0x27
 MIN_DIALOG_WIDTH = 100  # the process also owns zero-size helper windows
 
 folder, which, trigger = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -69,7 +69,8 @@ def type_text(hwnd, text):
 root = pathlib.Path(folder)
 (root / "sub").mkdir(parents=True, exist_ok=True)
 (root / "take-1.wav").write_text("a")
-# The dialog opens at the drive roots: walk down by name, as a person would.
+# The dialog opens in the app's start folder, the user folder for test-trigger: go up to
+# the drive roots with Left, then walk down by name, as a person would.
 steps = [root.drive] + list(root.parts[1:])
 
 injector = subprocess.Popen([os.path.join(injector_dir, "fzt-picker.exe")])
@@ -107,6 +108,8 @@ try:
                     break
                 key(hwnd, VK_ESCAPE)
         else:
+            for _ in range(len(pathlib.Path.home().parts) + 1):
+                key(hwnd, VK_LEFT)
             for step in steps:
                 type_text(hwnd, step)
                 key(hwnd, VK_RIGHT)
