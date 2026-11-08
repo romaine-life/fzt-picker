@@ -41,7 +41,7 @@ COM's `IModalWindow::Show()` must present a visible window owned by the host app
 
 ### Style system
 
-Picker reads all colors from `tui/style.go` (`tui.PaletteRGB`, `tui.ColorToRGB()`) and font config from `tui.DefaultFontName`/`tui.DefaultFontSize`. The GDI renderer maps tcell styles to GDI calls — this is the only picker-specific rendering code. Style changes in fzt-terminal apply to picker on rebuild.
+Picker reads all colors from `tui/style.go` (`tui.PaletteRGB`, `tui.ColorToRGB()`) and font config from `tui.DefaultFontName`/`tui.DefaultFontSize`. GDI does no font fallback, so the font named there (`CaskaydiaMono NF`) must be one home-sync installs on every PC; a missing one draws every icon as an empty box. The GDI renderer maps tcell styles to GDI calls — this is the only picker-specific rendering code. Style changes in fzt-terminal apply to picker on rebuild.
 
 ### Scoped view
 
@@ -142,6 +142,10 @@ The hook DLL loads into every GUI process and the frontend DLL into every proces
 The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each log line is append + close to handle concurrent writes from multiple hooked processes.
 
 ## Changelog
+
+### 2026-11-07: Icons in the file dialog
+
+- The file dialog drew every icon as an empty box: it asked GDI for FiraCode Nerd Font Mono, which only upstairspc has, and got Arial. It now uses CaskaydiaMono NF, the Nerd Font home-sync installs on every home PC. fzt-terminal v0.1.134; OpenProject FP-3, FP-8.
 
 ### 2026-11-07: A start folder under a hidden folder
 

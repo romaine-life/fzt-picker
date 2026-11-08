@@ -10,8 +10,8 @@ github.com/romaine-life/fzt v0.2.98 h1:3PiN8EHJpsinXx5gcuV80K06yLiRiBy4qotxRCUY9
 github.com/romaine-life/fzt v0.2.98/go.mod h1:+/4sSnR4iFd8ADQWCwJublmXt9lPzlvweFJJKEbTxLw=
 github.com/romaine-life/fzt-frontend v0.1.42 h1:76Nnu2GnJDUSOFXXRO0Wo/6/i4x1+St8FyoZ7RYQOaw=
 github.com/romaine-life/fzt-frontend v0.1.42/go.mod h1:qzYK4oYem6VZPeSp/wRaE4YNuxSUDZy7cIENuTOkGGA=
-github.com/romaine-life/fzt-terminal v0.1.132 h1:PsDxnpPTJFUxXvVaVHxhsVMQ2XnQSOgIB9uETX6EqEY=
-github.com/romaine-life/fzt-terminal v0.1.132/go.mod h1:/GqPGlDDjxQ827wYtljUAZwMEAlm1HGiSDrq9ZxRUvQ=
+github.com/romaine-life/fzt-terminal v0.1.134 h1:RWW/pPTuZvxKjlcw/THsb3prx0LBblBG/7zG+DhF9VM=
+github.com/romaine-life/fzt-terminal v0.1.134/go.mod h1:/GqPGlDDjxQ827wYtljUAZwMEAlm1HGiSDrq9ZxRUvQ=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
