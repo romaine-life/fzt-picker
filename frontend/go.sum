@@ -6,8 +6,8 @@ github.com/lucasb-eyer/go-colorful v1.3.0 h1:2/yBRLdWBZKrf7gB40FoiKfAWYQ0lqNcbuQ
 github.com/lucasb-eyer/go-colorful v1.3.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
 github.com/rivo/uniseg v0.4.7/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=
-github.com/romaine-life/fzt v0.2.98 h1:3PiN8EHJpsinXx5gcuV80K06yLiRiBy4qotxRCUY90A=
-github.com/romaine-life/fzt v0.2.98/go.mod h1:+/4sSnR4iFd8ADQWCwJublmXt9lPzlvweFJJKEbTxLw=
+github.com/romaine-life/fzt v0.2.99 h1:BPkIWBMdMZkGNZViRsva2cbaiP5zT7vkwJK9ZW00nyE=
+github.com/romaine-life/fzt v0.2.99/go.mod h1:+/4sSnR4iFd8ADQWCwJublmXt9lPzlvweFJJKEbTxLw=
 github.com/romaine-life/fzt-frontend v0.1.42 h1:76Nnu2GnJDUSOFXXRO0Wo/6/i4x1+St8FyoZ7RYQOaw=
 github.com/romaine-life/fzt-frontend v0.1.42/go.mod h1:qzYK4oYem6VZPeSp/wRaE4YNuxSUDZy7cIENuTOkGGA=
 github.com/romaine-life/fzt-terminal v0.1.134 h1:RWW/pPTuZvxKjlcw/THsb3prx0LBblBG/7zG+DhF9VM=
