@@ -215,13 +215,11 @@ func runPicker(foldersOnly bool, startDir string, hwndOwner uintptr) string {
 	}
 	pickerHwnd = hwnd
 
-	provider := picker.NewDirProvider(foldersOnly)
 	items := append([]core.Item{picker.HeaderItem("Name")}, picker.DriveRoots()...)
 
 	cfg := picker.NewConfig(picker.Options{
 		FoldersOnly: foldersOnly,
 		StartDir:    startDir,
-		Provider:    provider,
 	})
 
 	pickerSession = tui.NewTreeSession(items, cfg, gridCols, gridRows)

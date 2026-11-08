@@ -35,7 +35,7 @@ func TestFoldersOnlyKeepsLinkedFolders(t *testing.T) {
 		t.Skipf("symlinks unavailable here: %v", err)
 	}
 
-	p := NewDirProvider(true)
+	p := NewDirProvider(true, "")
 	var linked bool
 	for _, it := range p.LoadChildren(dir) {
 		if it.Fields[0] == "d" && it.HasChildren {
@@ -60,7 +60,7 @@ func TestLoadChildrenFoldersOnlyAndFullPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	items := NewDirProvider(true).LoadChildren(dir)
+	items := NewDirProvider(true, "").LoadChildren(dir)
 	if len(items) != 1 || items[0].Fields[0] != "sub" {
 		t.Fatalf("folders-only: got %v, want just sub", items)
 	}
@@ -68,7 +68,7 @@ func TestLoadChildrenFoldersOnlyAndFullPaths(t *testing.T) {
 		t.Errorf("Original = %q, want %q", items[0].Original, want)
 	}
 
-	if n := len(NewDirProvider(false).LoadChildren(dir)); n != 2 {
+	if n := len(NewDirProvider(false, "").LoadChildren(dir)); n != 2 {
 		t.Errorf("files and folders: got %d items, want 2", n)
 	}
 }

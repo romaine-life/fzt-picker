@@ -21,7 +21,7 @@ func TestDarwinHiddenFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	items := NewDirProvider(false).LoadChildren(dir)
+	items := NewDirProvider(false, "").LoadChildren(dir)
 	if len(items) != 1 || items[0].Fields[0] != "shown" {
 		var names []string
 		for _, it := range items {

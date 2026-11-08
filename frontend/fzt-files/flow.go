@@ -239,7 +239,6 @@ func (f *flow) showPicker(foldersOnly bool) {
 	cfg := picker.NewConfig(picker.Options{
 		FoldersOnly: foldersOnly,
 		StartDir:    f.folder,
-		Provider:    picker.NewDirProvider(foldersOnly),
 	})
 	cfg.Title = f.sentence()
 	f.menu.Show(items, f.withPanel(cfg))

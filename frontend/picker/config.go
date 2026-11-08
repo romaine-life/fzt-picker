@@ -1,15 +1,11 @@
 package picker
 
-import (
-	"github.com/romaine-life/fzt/core"
-	"github.com/romaine-life/fzt-terminal/tui"
-)
+import "github.com/romaine-life/fzt-terminal/tui"
 
 // Options configures the differences between the CGo DLL and standalone binary paths.
 type Options struct {
 	FoldersOnly bool
 	StartDir    string
-	Provider    core.TreeProvider
 	Title       string // optional purpose shown after the mode, e.g. "Launch Claude in"
 }
 
@@ -49,7 +45,7 @@ func NewConfig(opts Options) tui.Config {
 		HidePalette:  true,
 		FoldersOnly:  opts.FoldersOnly,
 		FrontendName: "picker",
-		Provider:     opts.Provider,
+		Provider:     NewDirProvider(opts.FoldersOnly, opts.StartDir),
 		FocusedDir:   opts.StartDir,
 	}
 }

@@ -35,8 +35,8 @@ CGO_ENABLED=0 GOMAXPROCS=4 go build -p 4 -o dist/fzt-files.exe ./fzt-files
 ### Real terminal check
 
 Run on a throwaway server, never the live `at` server. `FZT_FILES_DATA` keeps the run out
-of the real log, which is copied to the NAS. Use a test folder outside `AppData`: the
-picker hides hidden folders, so it can't walk down to one.
+of the real log, which is copied to the NAS. Use a test folder of your own, such as
+`D:\workspace\fp-qa`.
 
 ```sh
 tmux-throwaway start ffqa -- -s q -x 90 -y 26
@@ -67,8 +67,8 @@ Windows can run a program on a second desktop that is never switched to. Nothing
 reaches the screen or takes focus, and its windows still exist, take messages and paint.
 `tools/hidden-desktop/hidden_launch.py <name> <command line>` starts a command on a new one
 and waits for it; use a new name each run. Everything a process starts stays on its desktop,
-so a tmux server started there keeps its panes there too. Use a test folder outside
-`AppData`, such as `D:\workspace\fp-qa`, and delete it after.
+so a tmux server started there keeps its panes there too. Use a test folder of your own,
+such as `D:\workspace\fp-qa`, and delete it after.
 
 ## The file dialog
 
@@ -180,6 +180,10 @@ tmux -L fpqa kill-server
 Give the picker a second or so to start, and to write `pick.json` after Enter. Expect
 `stdout` to be the path and `exit` 0. Without `--folders-only`, pick a file the same way.
 Escape goes up one folder at a time, and from the drive roots exits 130 with empty `stdout`.
+
+A start folder inside a hidden one (make one with `attrib +h`) opens there, and going up
+shows that hidden folder and no other. A start folder that isn't there opens at the last
+folder found with `no folder <path>` in the title, which goes at the next key.
 
 ## Updating a running window
 

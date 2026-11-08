@@ -65,7 +65,6 @@ func main() {
 	cfg := picker.NewConfig(picker.Options{
 		FoldersOnly: foldersOnly,
 		StartDir:    startDir,
-		Provider:    picker.NewDirProvider(foldersOnly),
 		Title:       title,
 	})
 

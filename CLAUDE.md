@@ -45,7 +45,7 @@ Picker reads all colors from `tui/style.go` (`tui.PaletteRGB`, `tui.ColorToRGB()
 
 ### Scoped view
 
-The picker shows one folder at a time (fzt's `Config.ScopedView`): entering a folder replaces the list with its contents, and the prompt bar shows the folder's full path. Right, Space, Tab or a click goes into a folder (Enter too, in a file picker); Left, Backspace on an empty query, or Escape goes up. Search covers the current folder only. A start folder (`--start-dir`, or the app's `SetFolder`) is entered from the drive roots, so going up past it still works. The `:` command palette is off (`HidePalette`).
+The picker shows one folder at a time (fzt's `Config.ScopedView`): entering a folder replaces the list with its contents, and the prompt bar shows the folder's full path. Right, Space, Tab or a click goes into a folder (Enter too, in a file picker); Left, Backspace on an empty query, or Escape goes up. Search covers the current folder only. A start folder (`--start-dir`, or the app's `SetFolder`) is entered from the drive roots, so going up past it still works. Hidden folders stay hidden except the ones on the start path, so a start folder under `AppData` opens there and going up shows `AppData` alone. A start folder that can't be reached (deleted, or unreadable) opens at the last folder found, with `no folder <path>` in red in the title until the next key or click (fzt's `ExpandToPath`). The `:` command palette is off (`HidePalette`).
 
 ### Folder-only mode
 
@@ -85,7 +85,7 @@ Log: `%LOCALAPPDATA%\fzt-files\fzt-files.log`, through `log-search --app fzt-fil
 
 The CGo DLL and standalone binary share item loading, DirProvider setup, hidden file filtering, and session config via the `frontend/picker/` package:
 
-- **`frontend/picker/`** — shared: `DirProvider` (wraps `core.DirProvider` with hidden file filtering and folder-only filtering; also sets `Item.Original = fullPath` on each item), `DriveRoots` (drive roots with `Original = "D:\"`, or `/` on macOS), `NewConfig` (shared tui.Config builder), `HeaderItem`. Hidden-file rules are per OS: `hidden_windows.go` (hidden/system attributes), `hidden_darwin.go` (dot names and the `UF_HIDDEN` flag, as Finder hides them)
+- **`frontend/picker/`** — shared: `DirProvider` (wraps `core.DirProvider` with hidden file filtering, which spares the start folder and the folders above it, and folder-only filtering; also sets `Item.Original = fullPath` on each item), `DriveRoots` (drive roots with `Original = "D:\"`, or `/` on macOS), `NewConfig` (shared tui.Config builder, which makes the `DirProvider` for the start folder), `HeaderItem`. Hidden-file rules are per OS: `hidden_windows.go` (hidden/system attributes), `hidden_darwin.go` (dot names and the `UF_HIDDEN` flag, as Finder hides them)
 - **`frontend/cgo/`** — CGo DLL: Win32 window + GDI rendering + modal message loop (COM hook path)
 - **`frontend/`** — standalone binary: `tui.Run()` via tcell (shell path, `explore` at-command). The only part that builds on macOS: the work Mac's `launch-claude` runs it in a tmux pane. `front_windows.go` brings the console window forward; `front_darwin.go` is a no-op.
 
@@ -142,6 +142,10 @@ The hook DLL loads into every GUI process and the frontend DLL into every proces
 The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each log line is append + close to handle concurrent writes from multiple hooked processes.
 
 ## Changelog
+
+### 2026-11-07: A start folder under a hidden folder
+
+- A start folder inside a hidden folder (`AppData`) now opens there; before, the picker stopped at the last folder it could see with nothing on screen to say why. A start folder that still can't be reached says `no folder <path>` in the title. fzt v0.2.98; OpenProject FP-2, FP-7.
 
 ### 2026-10-30: Folders reached through a link
 
