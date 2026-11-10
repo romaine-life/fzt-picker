@@ -58,6 +58,16 @@ type command struct {
 	run               func(j job, answers []string) (outcome, error)
 }
 
+func openCommand() command {
+	return command{
+		name: "open file", description: "Open a file in its app, as a double-click does", verb: "open", working: "Opening",
+		blanks: []blank{{kind: fileBlank}},
+		run: func(_ job, a []string) (outcome, error) {
+			return outcome{a[0], "Opened " + filepath.Base(a[0])}, openFile(a[0])
+		},
+	}
+}
+
 func renameCommand(name, description string, kind blankKind) command {
 	return command{
 		name: name, description: description, verb: "rename", working: "Renaming",
@@ -115,6 +125,7 @@ func newFolderCommand() command {
 
 func commands() []command {
 	return []command{
+		openCommand(),
 		renameCommand("rename file", "Give a file a new name", fileBlank),
 		renameCommand("rename folder", "Give a folder a new name", folderBlank),
 		moveCommand("move file", "Move a file to another folder", fileBlank),

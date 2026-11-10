@@ -64,6 +64,7 @@ Each `command` in `flow.go` is its blanks (a file, a folder, typed text, or a co
 
 | Command | Blanks |
 | --- | --- |
+| `open file` | what: opened as a double-click in Explorer does, so a file no app opens gets Windows' "How do you want to open this?" |
 | `rename file`, `rename folder` | what, new name (selected up to the extension, as with F2 in Explorer) |
 | `move file`, `move folder`, `copy file`, `copy folder` | what, destination folder |
 | `delete file`, `delete folder` | what, confirmation |

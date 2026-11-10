@@ -50,6 +50,9 @@ MSYS_NO_PATHCONV=1 tmux -L ffqa send-keys -t q Enter
 Go through each command and check:
 
 - The title builds the sentence, and Escape takes one word back from any folder.
+- `open file` runs a file's default action: a `.cmd` that writes a file beside itself proves
+  it without an app window. A type with no app starts `OpenWith.exe`, so run that one on
+  [the hidden desktop](#the-hidden-desktop) and end the `OpenWith.exe` it left.
 - Rename opens with the name selected and the extension not. Typing replaces the selection.
 - A taken name shows why in the panel and asks again, with what was typed gone.
 - `delete file` on a fixed drive puts the file in the Recycle Bin. On a network or removable

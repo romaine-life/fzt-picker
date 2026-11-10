@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -393,6 +394,38 @@ func deleteEntry(path string) error {
 	}
 	if err := os.RemoveAll(path); err != nil {
 		return fmt.Errorf("Couldn't delete it: %s", plain(err))
+	}
+	return nil
+}
+
+// shellOpen runs a file's default action, as a double-click in Explorer does:
+// a file with no app gets Windows' "How do you want to open this?". It is a
+// variable so a test opens nothing.
+var shellOpen = func(path string) error {
+	file, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return err
+	}
+	dir, err := windows.UTF16PtrFromString(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	// Shell handlers may use COM, so the call gets a thread with an apartment.
+	// S_FALSE, already set up, still takes an uninitialize.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	if err := windows.CoInitializeEx(0, windows.COINIT_APARTMENTTHREADED|windows.COINIT_DISABLE_OLE1DDE); err == nil || err == syscall.Errno(1) {
+		defer windows.CoUninitialize()
+	}
+	return windows.ShellExecute(0, nil, file, nil, dir, windows.SW_SHOWNORMAL)
+}
+
+func openFile(path string) error {
+	if !exists(path) {
+		return refuse("missing", "It's no longer there.")
+	}
+	if err := shellOpen(path); err != nil {
+		return fmt.Errorf("Windows wouldn't open it: %s", plain(err))
 	}
 	return nil
 }

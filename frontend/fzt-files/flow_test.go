@@ -10,6 +10,7 @@ import (
 
 	"github.com/romaine-life/fzt-terminal/tui"
 	"github.com/romaine-life/fzt/core"
+	"golang.org/x/sys/windows"
 )
 
 // fakeMenu records what the flow asks of the menu. Update runs its function at
@@ -152,6 +153,45 @@ func TestAFailedRenameAsksAgainWithTheReason(t *testing.T) {
 		t.Fatalf("asked=%v panel=%+v", m.asked, m.state.Panel)
 	}
 	if !strings.Contains(strings.Join(m.state.Panel.Lines, " "), "already a b.wav") {
+		t.Fatalf("panel = %+v", m.state.Panel)
+	}
+}
+
+// standIn opens nothing for the test's length.
+func standIn(t *testing.T, open func(string) error) {
+	saved := shellOpen
+	shellOpen = open
+	t.Cleanup(func() { shellOpen = saved })
+}
+
+func TestOpenHandsTheFileToWindowsAndComesBackToTheList(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "take.wav")
+	write(t, source, "a")
+	var opened []string
+	standIn(t, func(p string) error { opened = append(opened, p); return nil })
+	f, m := begin(t, t.TempDir())
+	f.onPick(pickRow(m.items, "open file"))
+	if m.title() != "open "+waiting {
+		t.Fatalf("title = %q", m.title())
+	}
+	f.onPick(path(source))
+	wait(t, m, title)
+	if len(opened) != 1 || opened[0] != source || m.state.Panel.Style != core.PanelOK || f.folder != dir {
+		t.Fatalf("opened=%v panel=%+v folder=%q", opened, m.state.Panel, f.folder)
+	}
+}
+
+func TestAFailedOpenSaysWhyAndAsksForTheFileAgain(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "take.wav")
+	write(t, source, "a")
+	standIn(t, func(string) error { return windows.ERROR_ACCESS_DENIED })
+	f, m := begin(t, dir)
+	f.onPick(pickRow(m.items, "open file"))
+	f.onPick(path(source))
+	wait(t, m, "open "+waiting)
+	if m.state.Panel.Style != core.PanelFailed || !strings.Contains(strings.Join(m.state.Panel.Lines, " "), "Windows wouldn't open it") {
 		t.Fatalf("panel = %+v", m.state.Panel)
 	}
 }
