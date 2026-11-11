@@ -188,6 +188,18 @@ A start folder inside a hidden one (make one with `attrib +h`) opens there, and 
 shows that hidden folder and no other. A start folder that isn't there opens at the last
 folder found with `no folder <path>` in the title, which goes at the next key.
 
+## Previewing a change for Nelson
+
+A change to what he sees is shown to him before it ships, in his own window: run the
+test build on the throwaway server from the isolated check above, then put it in the
+bottom half of his pane with `tmux-throwaway show <server>` (its `-t` names a session
+on that server, not his pane). Before telling him what it shows, read what he
+will see: the shown pane is alive (`tmux display -p -t <shown pane> '#{pane_dead}'`
+prints `0`) and `tmux -L <server> capture-pane -p` shows the case you're describing.
+The turn his answer settles it, end the server with `tmux-throwaway end <server>` and
+close the shown pane if it stays (AHT-114). Updating his window below is the same:
+read it back before saying it's updated.
+
 ## Updating a running window
 
 `fzt-files` holds no state beyond the session, and a release installs into a new version
