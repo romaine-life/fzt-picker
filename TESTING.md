@@ -121,8 +121,8 @@ done
 
 `file` and `folder` should end with `selected file:` and the path, and `cancel` with
 `cancelled`. A test injector registers its shim from the test folder, which takes an entry in
-Windows' table of hook DLLs until its processes end; the table is shared by every desktop in
-the sign-in. If it is full, the injector exits and `picker.log` says so (RLFP-1). With `dialog shown` false, the hook gave up before drawing anything: its reason
+Windows' table of hook DLLs, shared by every desktop in the sign-in, and the entry may stay
+until the sign-in ends. If it is full, the injector exits and `picker.log` says so (RLFP-1). With `dialog shown` false, the hook gave up before drawing anything: its reason
 is the last line of `%TEMP%\picker.log`. That is how FP-5 showed up: every hooked File > Open
 was cancelling, because the hook looked for the dialog DLL in a folder releases no longer use.
 
