@@ -1,14 +1,15 @@
 name: Dependency Update
 
-# Run by hand: bumps fzt and fzt-terminal in frontend/go.mod, cuts a release
-# and runs build.yml with the new tag.
+# Started by strip-owner when it delivers a change to fzt or fzt-terminal; never by hand. The take-up
+# template closes any take-up still open, opens a PR taking them at their latest, has
+# Forgejo merge it once its checks pass, and exits (PIPT-3). The merge is released the
+# way every change here is.
 
 on:
   workflow_dispatch:
 
 concurrency:
-  # Shared with release.yml so tag-cutting is serialized.
-  group: release-tag
+  group: dependency-update
   cancel-in-progress: false
 
 jobs:
@@ -18,7 +19,3 @@ jobs:
     with:
       go-mod-path: frontend
       modules: github.com/romaine-life/fzt github.com/romaine-life/fzt-terminal
-      # Leaf with binary artifacts (Rust + Go): release, no downstream
-      # dispatch, then build.yml with the new tag builds and uploads.
-      artifact-build-workflow: build.yml
-      draft-release: true
