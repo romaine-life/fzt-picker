@@ -52,16 +52,17 @@ jobs:
           go version
           gcc --version
 
-      # ── Rust (COM hook + injector + test-trigger) ──────────────
+      # ── Rust (shim + COM hook + injector + test-trigger) ───────
       - name: Build Rust binaries
         working-directory: windows
         run: |
           rustc --version
           cargo build --release
 
+      # After the release build: the injector's test checks the shim it built.
       - name: Test the hook
         working-directory: windows
-        run: cargo test -p fzt-picker-hook -p fzt-picker-injector
+        run: cargo test --release -p fzt-picker-handoff -p fzt-picker-hook -p fzt-picker-injector
 
       # ── Go (CGo DLL + standalone frontend) ─────────────────────
       - name: Build CGo DLL
@@ -98,7 +99,7 @@ jobs:
         run: |
           Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory dist | Out-Null
-          foreach ($f in 'fzt_picker_hook.dll', 'fzt-picker.exe', 'test-trigger.exe') {
+          foreach ($f in 'fzt_picker_shim.dll', 'fzt_picker_hook.dll', 'fzt-picker.exe', 'test-trigger.exe') {
             Copy-Item "$env:CARGO_TARGET_DIR\release\$f" dist
           }
           Copy-Item frontend/fzt_picker_frontend.dll, frontend/fzt-picker-frontend.exe, frontend/fzt-files.exe dist

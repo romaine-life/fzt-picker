@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["hook", "injector", "test-trigger"]
+members = ["handoff", "hook", "injector", "shim", "test-trigger"]
 
 [profile.release]
 panic = "abort"

@@ -11,6 +11,7 @@ path = "src/main.rs"
 winresource = "0.1"
 
 [dependencies]
+fzt-picker-handoff = { path = "../handoff" }
 windows = { version = "0.58", features = [
     "Win32_Foundation",
     "Win32_Graphics_Gdi",

@@ -10,7 +10,7 @@ is about.
 | --- | --- |
 | `frontend/fzt-files` | [fzt-files](#fzt-files), then its real terminal check |
 | `frontend/cgo`, or a library bump | [The file dialog](#the-file-dialog) |
-| `windows/` | [The hook](#the-hook), after `cargo test -j 4 -p fzt-picker-hook` |
+| `windows/` | [The hook](#the-hook), after `cargo build -j 4 --release` and `cargo test -j 4 --release -p fzt-picker-handoff -p fzt-picker-hook -p fzt-picker-injector` |
 | `frontend/main.go`, `frontend/picker`, or a library bump | [The terminal picker](#the-terminal-picker) |
 
 Never point a test at real files.
@@ -120,15 +120,17 @@ done
 ```
 
 `file` and `folder` should end with `selected file:` and the path, and `cancel` with
-`cancelled`. With `dialog shown` false, the hook gave up before drawing anything: its reason
+`cancelled`. A test injector registers its shim from the test folder, which takes an entry in
+Windows' table of hook DLLs until its processes end; the table is shared by every desktop in
+the sign-in. If it is full, the injector exits and `picker.log` says so (RLFP-1). With `dialog shown` false, the hook gave up before drawing anything: its reason
 is the last line of `%TEMP%\picker.log`. That is how FP-5 showed up: every hooked File > Open
 was cancelling, because the hook looked for the dialog DLL in a folder releases no longer use.
 
 ### A release under a running app
 
 `swap_test.py` checks that a running app moves to a new release's hook without restarting.
-It lays out `v1`, `v2` and a `current` junction as home-sync does, starts the injector
-through `current`, and runs `test-trigger --repeat`, which opens a dialog every five seconds
+It lays out `v1`, `v2` and a `current` junction as home-sync does, each with the injector,
+shim and hook, starts the injector through `current`, and runs `test-trigger --repeat`, which opens a dialog every five seconds
 and makes windows in between as an app does. After the first dialog it swaps `current` to
 `v2` and restarts the injector. The hook logs the folder it looked in, so `swap.json` lists
 which release answered each dialog: it should be `v1`, then `v2`, `v2`.
@@ -142,7 +144,13 @@ python tools/hidden-desktop/hidden_launch.py "fp-swap-$$" "\"$python\" $(cygpath
 cat /tmp/fp-qa/swap.json
 ```
 
-An error goes to `swap-error.txt` in the same folder. Before FP-6 the injector loaded the hook
+An error goes to `swap-error.txt` in the same folder. The shim is registered through `current`
+for both releases; each app's shim loads `v1`'s hook and then `v2`'s once the new injector
+publishes it. Run it again with `overlap` as a fourth argument: the new injector
+starts before the old one stops, so the app's shim stays loaded and moves the detour itself.
+On a PC whose table is full, run both in another PC's signed-in session, through a one-off
+`schtasks /it` task that starts `hidden_launch.py`; an SSH session has no desktop for the
+dialogs. Before FP-6 the injector loaded the hook
 through `current`, every release's copy had that one name, and the answer was the first copy
 an app ever loaded, for as long as the app ran.
 

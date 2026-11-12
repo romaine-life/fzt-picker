@@ -46,17 +46,18 @@ static_detour! {
 /// unloaded, a call went through the others into its freed code (FZT-61: at
 /// Terminal crashed in `fzt_picker_hook.dll_unloaded` as fzt-picker restarted).
 /// So one copy at a time owns the detour: the one holding this process's named
-/// mutex. The others take it over from HookProc once the owner has unloaded.
+/// mutex. The others take it over from the shim's next event once the owner has
+/// unloaded or been detached.
 static mut OWNER: HANDLE = HANDLE(std::ptr::null_mut());
-/// Set once installing failed, so HookProc doesn't retry it on every event.
+/// Set once installing failed, so the shim's events don't retry it.
 static mut GAVE_UP: bool = false;
 
 /// Install the CoCreateInstance detour if no other copy of this DLL owns it. Called
-/// from DllMain on DLL_PROCESS_ATTACH and from HookProc.
+/// by the shim on every hook event; again after a detach, which only disabled it.
 ///
 /// # Safety
-/// May run under the loader lock (DllMain context). Only creates a mutex and does
-/// memory patching via retour — no LoadLibrary, no thread creation, no COM calls.
+/// Only creates a mutex and does memory patching via retour — no LoadLibrary, no
+/// thread creation, no COM calls.
 pub unsafe fn install() -> Result<(), Box<dyn std::error::Error>> {
     if !OWNER.is_invalid() || GAVE_UP {
         return Ok(());
@@ -72,6 +73,10 @@ pub unsafe fn install() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let detour = || -> Result<(), Box<dyn std::error::Error>> {
+        match CoCreateInstanceDetour.enable() {
+            Err(retour::Error::NotInitialized) => {}
+            done => return Ok(done?),
+        }
         let module = GetModuleHandleA(windows::core::s!("combase.dll"))?;
         let proc = GetProcAddress(module, windows::core::s!("CoCreateInstance"))
             .ok_or("CoCreateInstance not found in combase.dll")?;
@@ -131,4 +136,27 @@ unsafe fn hooked_co_create_instance(
 
     // Pass through to original
     CoCreateInstanceDetour.call(rclsid, punk_outer, cls_context, riid, ppv)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The shim detaches a release's copy when a newer one publishes, and the same
+    /// copy is attached again when the injector restarts on that release.
+    #[test]
+    fn a_detached_copy_attaches_again() {
+        unsafe {
+            install().unwrap();
+            assert!(!OWNER.is_invalid());
+            assert!(CoCreateInstanceDetour.is_enabled());
+            uninstall();
+            assert!(OWNER.is_invalid());
+            assert!(!CoCreateInstanceDetour.is_enabled());
+            install().unwrap();
+            assert!(!GAVE_UP);
+            assert!(CoCreateInstanceDetour.is_enabled());
+            uninstall();
+        }
+    }
 }

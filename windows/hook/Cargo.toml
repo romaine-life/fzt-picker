@@ -7,6 +7,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
+fzt-picker-handoff = { path = "../handoff" }
 windows = { version = "0.58", features = [
     "implement",
     "Win32_Foundation",

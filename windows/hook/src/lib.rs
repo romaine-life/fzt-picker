@@ -3,68 +3,30 @@ mod hook;
 mod proxy;
 
 use std::ffi::c_void;
-use windows::Win32::Foundation::{BOOL, HINSTANCE, LPARAM, LRESULT, TRUE, WPARAM};
-use windows::Win32::System::SystemServices::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH};
-use windows::Win32::UI::WindowsAndMessaging::{CallNextHookEx, HHOOK};
+use windows::Win32::Foundation::{BOOL, HINSTANCE, TRUE};
+use windows::Win32::System::SystemServices::DLL_PROCESS_DETACH;
 
-static mut HOOK_HANDLE: HHOOK = HHOOK(std::ptr::null_mut());
+pub(crate) use fzt_picker_handoff::log;
 
-/// Called by the injector after SetWindowsHookEx to communicate the hook handle.
-///
-/// # Safety
-/// Must be called exactly once from the injector process before any messages are dispatched.
+/// Called by the shim on each hook event: install the detour unless another copy
+/// of this DLL owns it (hook::install).
 #[no_mangle]
-pub unsafe extern "system" fn SetHookHandle(handle: HHOOK) {
-    HOOK_HANDLE = handle;
-}
-
-/// CBT hook callback required by SetWindowsHookEx. The detour goes in from DllMain;
-/// here a copy that found another copy owning it takes over once that one has
-/// unloaded (hook::install).
-#[no_mangle]
-pub unsafe extern "system" fn HookProc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+pub unsafe extern "system" fn FztPickerAttach() {
     if let Err(e) = hook::install() {
         log(&format!("picker: hook install failed: {e}"));
     }
-    CallNextHookEx(HOOK_HANDLE, code, wparam, lparam)
+}
+
+/// Called by the shim when a newer release takes over, or when the injector stops.
+#[no_mangle]
+pub unsafe extern "system" fn FztPickerDetach() {
+    hook::uninstall();
 }
 
 #[no_mangle]
-unsafe extern "system" fn DllMain(
-    _hinstance: HINSTANCE,
-    reason: u32,
-    _reserved: *mut c_void,
-) -> BOOL {
-    match reason {
-        DLL_PROCESS_ATTACH => {
-            if let Err(e) = hook::install() {
-                log(&format!("picker: hook install failed: {e}"));
-            }
-        }
-        DLL_PROCESS_DETACH => {
-            hook::uninstall();
-        }
-        _ => {}
+unsafe extern "system" fn DllMain(_hinstance: HINSTANCE, reason: u32, _reserved: *mut c_void) -> BOOL {
+    if reason == DLL_PROCESS_DETACH {
+        hook::uninstall();
     }
     TRUE
-}
-
-/// Append a log line to %TEMP%\picker.log.
-/// Safe to call from any process — opens, appends, closes each time
-/// to handle concurrent writes from multiple hooked processes.
-fn log(msg: &str) {
-    use std::io::Write;
-    let Ok(temp) = std::env::var("TEMP") else {
-        return;
-    };
-    let path = std::path::Path::new(&temp).join("picker.log");
-    let Ok(mut f) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&path)
-    else {
-        return;
-    };
-    let pid = std::process::id();
-    let _ = writeln!(f, "[{pid}] {msg}");
 }

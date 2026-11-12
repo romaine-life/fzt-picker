@@ -21,13 +21,14 @@ COM's `IModalWindow::Show()` must present a visible window owned by the host app
 
 ### COM hook components
 
-- **hook DLL** (`fzt_picker_hook.dll`): Loaded into every GUI process via `SetWindowsHookEx`. Hooks `CoCreateInstance` in `combase.dll` to intercept `CLSID_FileOpenDialog`. Returns a COM proxy. A copy stays loaded after its injector exits, so one process can hold several releases' copies; only the copy holding the process's `Local\fzt-picker-detour-<pid>` mutex patches, and another takes over from `HookProc` once it unloads. Copies that each patched on top of the last crashed the host when one unloaded (FZT-61).
-- **injector** (`fzt-picker.exe`): Windows GUI app (no console) that installs the global CBT hook and maintains a message loop. Shows a system tray icon ("fzt picker") with right-click Exit. Killing it removes the hook from new processes. It loads the hook DLL by its real version folder, not through the `current` junction it starts from: through the junction every release's copy had one name, so a process that held an older copy was handed it again and never took a new hook (FP-6). By version folder, the older copy unloads once its injector is gone and the new one takes over on the process's next window event.
+- **shim DLL** (`fzt_picker_shim.dll`): the DLL `SetWindowsHookEx` registers, always through the `current` junction. Windows keeps a small fixed table of hook DLL paths, holding an entry while any process has that DLL loaded; a path per release filled it, and Windows refused every new release with "The specified module could not be found" (RLFP-1). One path for every release takes one entry. Its `HookProc` reads which hook DLL the injector last published (`windows/handoff`, a named mapping per shim path) and loads that one by its version folder, so a running app moves to a new release on its next window event (FP-6). Windows calls `HookProc` at its offset in whichever shim build a process holds, so `shim/build.rs` puts it first in the code section and the injector refuses a shim where it isn't.
+- **hook DLL** (`fzt_picker_hook.dll`): loaded by the shim. Hooks `CoCreateInstance` in `combase.dll` to intercept `CLSID_FileOpenDialog` and returns a COM proxy. One process can hold several releases' copies; only the copy holding the process's `Local\fzt-picker-detour-<pid>` mutex patches. The shim detaches the old copy when a newer release publishes, and attaches its own on each event, so it takes over from a pre-shim copy once that unloads. Copies that each patched on top of the last crashed the host when one unloaded (FZT-61).
+- **injector** (`fzt-picker.exe`): Windows GUI app (no console) that publishes its release's hook DLL, installs the global CBT hook with the shim and maintains a message loop. Shows a system tray icon ("fzt picker") with right-click Exit. Stopping it unloads the shims, which detach the hook, so dialogs go back to the system's. A failure to start goes to `picker.log`.
 - **test-trigger** (`test-trigger.exe`): Standalone binary that calls `CoCreateInstance(CLSID_FileOpenDialog)` and `Show()` to test the hook without needing a real app. `--folders` flag sets `FOS_PICKFOLDERS` to test folder-pick mode.
 
 ### Data flow
 
-1. App calls `CoCreateInstance(CLSID_FileOpenDialog)` → hook returns proxy
+1. App calls `CoCreateInstance(CLSID_FileOpenDialog)` → hook (loaded by the shim on an earlier window event) returns proxy
 2. App configures proxy (SetFileTypes, SetOptions, SetFolder, etc.)
 3. App calls `Show()` → proxy loads `fzt_picker_frontend.dll` via `LoadLibrary`, calls `PickFile(filter, foldersOnly, startDir, ownerHwnd)`
 4. Go DLL creates a visible Win32 window owned by the host app's HWND
@@ -124,7 +125,7 @@ Testing, including the file dialog on a hidden desktop so nothing reaches the sc
 
 ## Running
 
-After a complete Forgejo release, CI starts home-sync on every PC. It verifies all five signed Windows binaries, switches C:\Program Files\at-home\fzt-picker\current, and reconciles the tray injector and sign-in shortcut. Cut a release through Forgejo release.yml; the manual publish.ps1 was retired by HOMECFG-110.
+After a complete Forgejo release, CI starts home-sync on every PC. It verifies all six signed Windows binaries, switches C:\Program Files\at-home\fzt-picker\current, and reconciles the tray injector and sign-in shortcut. Cut a release through Forgejo release.yml; the manual publish.ps1 was retired by HOMECFG-110.
 
 ```sh
 # Standalone folder picker (used by the 'explore' at-command)
@@ -136,13 +137,17 @@ fzt-files
 
 ## Development workflow
 
-The hook DLL loads into every GUI process and the frontend DLL into every process that opened a dialog, so neither can be replaced while those run. Each published version is its own folder, so nothing is replaced: CI publishes the release and home-sync restarts the injector on the new version. New processes get the new DLLs; old processes keep the old ones until they restart.
+The shim and hook DLLs load into every GUI process and the frontend DLL into every process that opened a dialog, so neither can be replaced while those run. Each published version is its own folder, so nothing is replaced: CI publishes the release and home-sync restarts the injector on the new version. A running process loads the new hook on its next window event and keeps the shim it holds, which is why the shim's contract with the handoff only grows by new names.
 
 ## Logging
 
-The hook DLL logs to `%TEMP%\picker.log` with the host process PID prefix. Each log line is append + close to handle concurrent writes from multiple hooked processes.
+The injector, shim and hook DLL log to `%TEMP%\picker.log` with the host process PID prefix. Each log line is append + close to handle concurrent writes from multiple hooked processes.
 
 ## Changelog
+
+### 2026-11-12: Every release starts
+
+- The injector registers a small shim DLL from one path for every release, and the shim loads the release's hook. Registering each release's hook by its own folder had filled Windows' table of hook DLLs, and from v0.1.101 the injector exited at start with "The specified module could not be found". A failure to start is now in `picker.log`. OpenProject RLFP-1.
 
 ### 2026-11-07: Icons in the file dialog
 
