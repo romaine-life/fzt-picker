@@ -37,6 +37,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag }}
+      - uses: romaine-life/pipeline-templates/actions/home-cache@main
 
       # windows/rust-toolchain.toml selects nightly; installing it leaves the
       # machine's default toolchain alone. Cargo's target folder persists in
@@ -163,6 +164,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v4
+      - uses: romaine-life/pipeline-templates/actions/check-fetches@main
       - name: Wait for the GitHub macOS run
         id: mac
         env:
@@ -175,7 +178,7 @@ jobs:
           if [ -n "$TAG" ]; then
             SHA=$(curl -fsS -H "Authorization: token $FJ" "$API/tags/$TAG" | jq -r .commit.sha)
           fi
-          api="https://api.github.com/repos/romaine-life/fzt-picker/actions/workflows/macos.yml/runs?head_sha=$SHA&per_page=1"
+          api="https://api.github.com/repos/romaine-life/fzt-picker/actions/workflows/macos.yml/runs?head_sha=$SHA&per_page=1" # internet: GitHub-hosted macOS run status
           start=$(date +%s)
           while :; do
             r=$(curl -fsS --retry 3 -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$api")
@@ -215,8 +218,9 @@ jobs:
           RUN_ID: ${{ steps.mac.outputs.run-id }}
         run: |
           name=fzt-picker-frontend-darwin-arm64
+          api="https://api.github.com/repos/romaine-life/fzt-picker/actions/runs/$RUN_ID/artifacts?name=$name" # internet: GitHub-hosted macOS build artifact
           url=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
-            "https://api.github.com/repos/romaine-life/fzt-picker/actions/runs/$RUN_ID/artifacts?name=$name" \
+            "$api" \
             | jq -r '.artifacts[0].archive_download_url // empty')
           [ -n "$url" ] || { echo "::error::macOS run $RUN_ID has no $name artifact"; exit 1; }
           curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -o mac.zip "$url"
