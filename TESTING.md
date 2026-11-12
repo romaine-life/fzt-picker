@@ -13,8 +13,7 @@ is about.
 | `windows/` | [The hook](#the-hook), after `cargo test -j 4 -p fzt-picker-hook` |
 | `frontend/main.go`, `frontend/picker`, or a library bump | [The terminal picker](#the-terminal-picker) |
 
-Work in a worktree under `D:\workspace\fzt-picker\<branch>`. This is a gaming PC, so keep
-builds and tests to four cores. Never point a test at real files.
+Never point a test at real files.
 
 ## fzt-files
 
@@ -36,7 +35,7 @@ CGO_ENABLED=0 GOMAXPROCS=4 go build -p 4 -o dist/fzt-files.exe ./fzt-files
 
 Run on a throwaway server, never the live `at` server. `FZT_FILES_DATA` keeps the run out
 of the real log, which is copied to the NAS. Use a test folder of your own, such as
-`D:\workspace\fp-qa`.
+`/tmp/fp-qa` (Git Bash's temp folder).
 
 ```sh
 tmux-throwaway start ffqa -- -s q -x 90 -y 26
@@ -71,7 +70,7 @@ reaches the screen or takes focus, and its windows still exist, take messages an
 `tools/hidden-desktop/hidden_launch.py <name> <command line>` starts a command on a new one
 and waits for it; use a new name each run. Everything a process starts stays on its desktop,
 so a tmux server started there keeps its panes there too. Use a test folder of your own,
-such as `D:\workspace\fp-qa`, and delete it after.
+such as `/tmp/fp-qa` (Git Bash's temp folder), and delete it after.
 
 ## The file dialog
 
@@ -81,10 +80,10 @@ and ends itself after 25 seconds if the dialog sticks.
 
 ```sh
 python=$(python -c "import sys;print(sys.executable)")
-mkdir /d/workspace/fp-qa
+mkdir /tmp/fp-qa
 for s in file folder inside cancel twice; do
-  python tools/hidden-desktop/hidden_launch.py "fp-dialog-$s-$$" "\"$python\" $(cygpath -w "$PWD/tools/hidden-desktop/dialog_test.py") D:\\workspace\\fp-qa $s"
-  cat /d/workspace/fp-qa/report-$s.json
+  python tools/hidden-desktop/hidden_launch.py "fp-dialog-$s-$$" "\"$python\" $(cygpath -w "$PWD/tools/hidden-desktop/dialog_test.py") $(cygpath -w /tmp/fp-qa) $s"
+  cat /tmp/fp-qa/report-$s.json
 done
 ```
 
@@ -113,10 +112,10 @@ drive roots with Left, walks down by name and reports what came back.
 cd windows && cargo build -j 4 --release && cd ..
 python=$(python -c "import sys;print(sys.executable)")
 trigger=$(cygpath -w "$PWD/windows/target/release/test-trigger.exe")
-mkdir /d/workspace/fp-qa
+mkdir /tmp/fp-qa
 for s in file folder cancel; do
-  python tools/hidden-desktop/hidden_launch.py "fp-hook-$s-$$" "\"$python\" $(cygpath -w "$PWD/tools/hidden-desktop/hook_test.py") D:\\workspace\\fp-qa $s \"$trigger\""
-  cat /d/workspace/fp-qa/hook-$s.json
+  python tools/hidden-desktop/hidden_launch.py "fp-hook-$s-$$" "\"$python\" $(cygpath -w "$PWD/tools/hidden-desktop/hook_test.py") $(cygpath -w /tmp/fp-qa) $s \"$trigger\""
+  cat /tmp/fp-qa/hook-$s.json
 done
 ```
 
@@ -138,9 +137,9 @@ which release answered each dialog: it should be `v1`, then `v2`, `v2`.
 cd windows && cargo build -j 4 --release && cd ..
 python=$(python -c "import sys;print(sys.executable)")
 build=$(cygpath -w "$PWD/windows/target/release")
-mkdir /d/workspace/fp-qa
-python tools/hidden-desktop/hidden_launch.py "fp-swap-$$" "\"$python\" $(cygpath -w "$PWD/tools/hidden-desktop/swap_test.py") D:\\workspace\\fp-qa \"$build\" \"$build\\test-trigger.exe\""
-cat /d/workspace/fp-qa/swap.json
+mkdir /tmp/fp-qa
+python tools/hidden-desktop/hidden_launch.py "fp-swap-$$" "\"$python\" $(cygpath -w "$PWD/tools/hidden-desktop/swap_test.py") $(cygpath -w /tmp/fp-qa) \"$build\" \"$build\\test-trigger.exe\""
+cat /tmp/fp-qa/swap.json
 ```
 
 An error goes to `swap-error.txt` in the same folder. Before FP-6 the injector loaded the hook
@@ -169,14 +168,14 @@ through the pane's shell, which is pwsh and mangles the quoting.
 python=$(python -c "import sys;print(sys.executable)")
 tools=$(cygpath -w "$PWD/tools/hidden-desktop")
 picker='C:\Program Files\at-home\fzt-picker\current\fzt-picker-frontend.exe'
-mkdir -p /d/workspace/fp-qa/sub
+mkdir -p /tmp/fp-qa/sub
 python tools/hidden-desktop/hidden_launch.py "fp-term-$$" '"C:\Program Files\at-home\at-home-tools\current\tmux-throwaway.exe" start fpqa -- -s q -x 90 -y 26'
 MSYS_NO_PATHCONV=1 tmux -L fpqa set -g remain-on-exit on
-MSYS_NO_PATHCONV=1 tmux -L fpqa respawn-pane -k -t q "$python" "$tools\caller.py" 'D:\workspace\fp-qa\pick.json' "$picker" --folders-only --start-dir 'D:\workspace\fp-qa'
+MSYS_NO_PATHCONV=1 tmux -L fpqa respawn-pane -k -t q "$python" "$tools\caller.py" "$(cygpath -w /tmp/fp-qa)\pick.json" "$picker" --folders-only --start-dir "$(cygpath -w /tmp/fp-qa)"
 MSYS_NO_PATHCONV=1 tmux -L fpqa capture-pane -p -t q
 MSYS_NO_PATHCONV=1 tmux -L fpqa send-keys -t q -l sub
 MSYS_NO_PATHCONV=1 tmux -L fpqa send-keys -t q Enter
-cat /d/workspace/fp-qa/pick.json
+cat /tmp/fp-qa/pick.json
 tmux -L fpqa kill-server
 ```
 
