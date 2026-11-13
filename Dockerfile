@@ -1,4 +1,5 @@
 # escape=`
+# check-fetches: not built by home CI (no workflow builds this image)
 FROM mcr.microsoft.com/windows/servercore:ltsc2022
 
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
