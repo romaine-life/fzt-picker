@@ -119,7 +119,7 @@ go build -o fzt-files.exe ./fzt-files
 GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o fzt-picker-frontend-darwin-arm64 .
 ```
 
-CI runs on Forgejo (`.forgejo/workflows/build.yml`) on every pull request and main push. Its `windows` job builds, checks imports, vets, tests and signs on upstairspc (host mode: rustup nightly, the machine's Go and WinLibs gcc). The macOS build runs on GitHub from the push mirror (`.github/workflows/macos.yml`, vet and `go test ./picker` on `macos-latest`); Forgejo's `macos` job waits for that run, and on a release adds `fzt-picker-frontend-darwin-arm64` to the Forgejo release.
+CI runs on Forgejo (`.forgejo/workflows/ci.yml`) on every pull request and main push; a pull request that changes only documentation skips its `windows` and `macos` jobs. Its `windows` job builds, checks imports, vets, tests and signs on upstairspc (host mode: rustup nightly, the machine's Go and WinLibs gcc). The macOS build runs on GitHub from the push mirror (`.github/workflows/macos.yml`, vet and `go test ./picker` on `macos-latest`); Forgejo's `macos` job waits for that run. A release runs the same build again in `.forgejo/workflows/build.yml` with the release tag, which uploads the Windows binaries and adds `fzt-picker-frontend-darwin-arm64` to the Forgejo release.
 
 Testing, including the file dialog on a hidden desktop so nothing reaches the screen: [TESTING.md](TESTING.md).
 

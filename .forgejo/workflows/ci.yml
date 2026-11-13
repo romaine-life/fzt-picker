@@ -1,0 +1,199 @@
+name: CI
+
+# Builds and tests the Rust COM hook, injector and test-trigger and the Go CGo
+# DLL and standalone frontend, and signs them, on every pull request and main
+# push. Releases are cut by release.yml, which runs build.yml with the new tag
+# to build the same program again and upload it, so a release is never the
+# first build of a change.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: romaine-life/pipeline-templates/actions/check-fetches@main
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$EVENT" != pull_request ]; then
+            echo code=true >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(git diff --name-only "$BASE...HEAD")
+          if grep -qvE '\.md$|^docs/|^LICENSE$' <<< "$files"; then
+            echo code=true >> "$GITHUB_OUTPUT"
+          fi
+
+  # upstairspc, host mode: the job uses the machine's Rust (rustup), Go,
+  # WinLibs gcc, Visual Studio Build Tools and Windows SDK signtool.
+  windows:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: windows-latest
+    # The runner's account has an interactive pwsh profile (the home shell),
+    # which a step must not load; act adds no .ps1 to a custom shell's script.
+    # On the runner's PATH, bash is WSL's launcher, so no step uses bash.
+    defaults:
+      run:
+        shell: pwsh -NoLogo -NoProfile -NonInteractive -Command "$ErrorActionPreference = 'Stop'; . ([scriptblock]::Create([IO.File]::ReadAllText('{0}'))); if (Test-Path variable:LASTEXITCODE) { exit $LASTEXITCODE }"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: romaine-life/pipeline-templates/actions/home-cache@main
+
+      # windows/rust-toolchain.toml selects nightly; installing it leaves the
+      # machine's default toolchain alone. Cargo's target folder persists in
+      # the runner's folder in place of a cache (the runner runs one job at a
+      # time).
+      - name: Toolchain
+        run: |
+          $target = "$env:USERPROFILE\.forgejo-runner\cargo-target\fzt-picker"
+          New-Item -ItemType Directory -Force $target | Out-Null
+          "CARGO_TARGET_DIR=$target" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          rustup toolchain install nightly --profile minimal
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          go version
+          gcc --version
+
+      # ── Rust (shim + COM hook + injector + test-trigger) ───────
+      - name: Build Rust binaries
+        working-directory: windows
+        run: |
+          rustc --version
+          cargo build --release
+
+      # After the release build: the injector's test checks the shim it built.
+      - name: Test the hook
+        working-directory: windows
+        run: cargo test --release -p fzt-picker-handoff -p fzt-picker-hook -p fzt-picker-injector
+
+      # ── Go (CGo DLL + standalone frontend) ─────────────────────
+      - name: Build CGo DLL
+        working-directory: frontend
+        env:
+          CGO_ENABLED: "1"
+          CC: gcc
+        run: go build -buildmode=c-shared -o fzt_picker_frontend.dll ./cgo
+
+      - name: Vet
+        working-directory: frontend
+        run: go vet . ./picker ./fzt-files
+
+      - name: Test
+        working-directory: frontend
+        run: go test ./picker ./fzt-files
+
+      - name: Build standalone frontend
+        working-directory: frontend
+        env:
+          CGO_ENABLED: "0"
+        run: go build -o fzt-picker-frontend.exe .
+
+      - name: Build fzt-files
+        working-directory: frontend
+        env:
+          CGO_ENABLED: "0"
+          VERSION: ${{ github.sha }}
+        run: |
+          $built = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+          go build -trimpath -ldflags "-X main.version=$env:VERSION -X main.buildRepo=$env:GITHUB_REPOSITORY -X main.buildServer=$env:GITHUB_SERVER_URL -X main.buildTime=$built" -o fzt-files.exe ./fzt-files
+
+      - name: Collect
+        run: |
+          Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory dist | Out-Null
+          foreach ($f in 'fzt_picker_shim.dll', 'fzt_picker_hook.dll', 'fzt-picker.exe', 'test-trigger.exe') {
+            Copy-Item "$env:CARGO_TARGET_DIR\release\$f" dist
+          }
+          Copy-Item frontend/fzt_picker_frontend.dll, frontend/fzt-picker-frontend.exe, frontend/fzt-files.exe dist
+          Get-ChildItem dist | Format-Table Name, Length
+
+      # The hook loads fzt_picker_frontend.dll into every process that opens a
+      # file dialog, so it may not need a MinGW runtime DLL (libwinpthread,
+      # libgcc_s) beside it. It is the only binary gcc links.
+      - name: Runtime imports
+        run: |
+          $out = objdump -p dist/fzt_picker_frontend.dll
+          if ($LASTEXITCODE) { throw 'objdump failed' }
+          $dlls = @($out | Select-String 'DLL Name: (\S+)' | ForEach-Object { $_.Matches[0].Groups[1].Value })
+          if (-not $dlls) { throw 'found no imports in fzt_picker_frontend.dll' }
+          "fzt_picker_frontend.dll: $($dlls -join ', ')"
+          $bad = @($dlls | Where-Object { $_ -like 'lib*.dll' })
+          if ($bad) { throw "fzt_picker_frontend.dll needs $($bad -join ', ')" }
+
+      # Defender quarantined an unsigned tmux build as Program:Win32/Contebrew.A!ml
+      # and passed the same build signed (TMUX-30). The certificate is at
+      # Terminal's, which every home PC trusts.
+      - name: Sign
+        env:
+          PFX: ${{ secrets.AT_TERMINAL_PFX }}
+          PFX_PASSWORD: ${{ secrets.AT_TERMINAL_PFX_PASSWORD }}
+        run: |
+          if (-not $env:PFX) { throw 'AT_TERMINAL_PFX is not set' }
+          $signtool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe' | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signtool) { throw 'signtool not found' }
+          [IO.File]::WriteAllBytes("$PWD\cert.pfx", [Convert]::FromBase64String($env:PFX))
+          try {
+            & $signtool.FullName sign /fd SHA256 /f cert.pfx /p $env:PFX_PASSWORD (Get-ChildItem dist).FullName
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          } finally { Remove-Item cert.pfx }
+
+  # The standalone frontend for the work Mac (launch-claude in a tmux pane).
+  # It is built and tested on GitHub from the push mirror
+  # (.github/workflows/macos.yml); this job waits for that run on the same
+  # commit and passes only if it passed.
+  macos:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait for the GitHub macOS run
+        env:
+          GH_TOKEN: ${{ secrets.GH_MIRROR_TOKEN }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          api="https://api.github.com/repos/romaine-life/fzt-picker/actions/workflows/macos.yml/runs?head_sha=$SHA&per_page=1" # internet: GitHub-hosted macOS run status
+          start=$(date +%s)
+          while :; do
+            r=$(curl -fsS --retry 3 -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$api")
+            elapsed=$(( $(date +%s) - start ))
+            if [ "$(jq '.total_count' <<<"$r")" -gt 0 ]; then
+              status=$(jq -r '.workflow_runs[0].status' <<<"$r")
+              conclusion=$(jq -r '.workflow_runs[0].conclusion' <<<"$r")
+              url=$(jq -r '.workflow_runs[0].html_url' <<<"$r")
+              if [ "$status" = completed ]; then
+                echo "macOS run $url: $conclusion"
+                if [ "$conclusion" = success ]; then
+                  exit 0
+                fi
+                echo "::error::the macOS run on GitHub ended $conclusion: $url"
+                exit 1
+              fi
+              if [ "$elapsed" -ge 2700 ]; then
+                echo "::error::the macOS run on GitHub did not finish in 45 minutes: $url"
+                exit 1
+              fi
+              echo "macOS run $url: $status"
+            elif [ "$elapsed" -ge 900 ]; then
+              echo "::error::no macOS run on GitHub for $SHA after 15 minutes: the push mirror did not deliver it"
+              exit 1
+            fi
+            sleep 30
+          done

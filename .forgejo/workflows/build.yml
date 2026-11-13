@@ -1,16 +1,13 @@
 name: Build
 
 # Builds the Rust COM hook, injector and test-trigger and the Go CGo DLL and
-# standalone frontend on every pull request and main push. Run by
-# release.yml (through the pipeline-templates release template) with a `tag`
-# after it cuts a release: that run checks out the tag and uploads the assets
-# to the existing Forgejo release, so a release is never the first build of a
-# change.
+# standalone frontend for a release. Run by release.yml (through the
+# pipeline-templates release template) with a `tag` after it cuts a release:
+# it checks out the tag and uploads the assets to the existing Forgejo
+# release. ci.yml runs the same build on every pull request and main push, so
+# a release is never the first build of a change.
 
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       tag:
