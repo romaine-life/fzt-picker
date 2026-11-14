@@ -90,7 +90,7 @@ jobs:
         working-directory: frontend
         env:
           CGO_ENABLED: "0"
-          VERSION: ${{ inputs.tag || github.sha }}
+          VERSION: ${{ inputs.tag }}
         run: |
           $built = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
           go build -trimpath -ldflags "-X main.version=$env:VERSION -X main.buildRepo=$env:GITHUB_REPOSITORY -X main.buildServer=$env:GITHUB_SERVER_URL -X main.buildTime=$built" -o fzt-files.exe ./fzt-files

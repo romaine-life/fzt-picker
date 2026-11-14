@@ -57,6 +57,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: romaine-life/pipeline-templates/actions/home-cache@main
 
+      # Named after the number release.yml would give it; only release.yml releases.
+      - name: Number the build
+        id: version
+        uses: romaine-life/pipeline-templates/actions/release-version@main
+        with:
+          prefix: v0.1
+          publish: 'false'
+
       # windows/rust-toolchain.toml selects nightly; installing it leaves the
       # machine's default toolchain alone. Cargo's target folder persists in
       # the runner's folder in place of a cache (the runner runs one job at a
@@ -109,7 +117,7 @@ jobs:
         working-directory: frontend
         env:
           CGO_ENABLED: "0"
-          VERSION: ${{ github.sha }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           $built = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
           go build -trimpath -ldflags "-X main.version=$env:VERSION -X main.buildRepo=$env:GITHUB_REPOSITORY -X main.buildServer=$env:GITHUB_SERVER_URL -X main.buildTime=$built" -o fzt-files.exe ./fzt-files
