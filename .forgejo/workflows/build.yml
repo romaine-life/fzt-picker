@@ -36,17 +36,19 @@ jobs:
           ref: ${{ inputs.tag }}
       - uses: romaine-life/pipeline-templates/actions/home-cache@main
 
-      # windows/rust-toolchain.toml selects nightly; installing it leaves the
-      # machine's default toolchain alone. Cargo's target folder persists in
-      # the runner's folder in place of a cache (the runner runs one job at a
-      # time).
+      # The nightly windows/rust-toolchain.toml names; installing it leaves the
+      # machine's default toolchain alone.
+      - uses: romaine-life/pipeline-templates/actions/rust-toolchain@main
+        with:
+          toolchain: nightly-2026-11-12
+
+      # Cargo's target folder persists in the runner's folder in place of a
+      # cache (the runner runs one job at a time).
       - name: Toolchain
         run: |
           $target = "$env:USERPROFILE\.forgejo-runner\cargo-target\fzt-picker"
           New-Item -ItemType Directory -Force $target | Out-Null
           "CARGO_TARGET_DIR=$target" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
-          rustup toolchain install nightly --profile minimal
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           go version
           gcc --version
 
