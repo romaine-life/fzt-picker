@@ -10,20 +10,12 @@ use windows_core::HRESULT;
 use crate::proxy;
 
 /// CLSID_FileOpenDialog {DC1C5A9C-E88A-4DDE-A5A1-60F82A20AEF7}
-const CLSID_FILE_OPEN_DIALOG: GUID = GUID {
-    data1: 0xDC1C5A9C,
-    data2: 0xE88A,
-    data3: 0x4DDE,
-    data4: [0xA5, 0xA1, 0x60, 0xF8, 0x2A, 0x20, 0xAE, 0xF7],
-};
+const CLSID_FILE_OPEN_DIALOG: GUID =
+    GUID { data1: 0xDC1C5A9C, data2: 0xE88A, data3: 0x4DDE, data4: [0xA5, 0xA1, 0x60, 0xF8, 0x2A, 0x20, 0xAE, 0xF7] };
 
 /// CLSID_FileSaveDialog {C0B4E2F3-BA21-4773-8DBA-335EC946EB8B}
-const CLSID_FILE_SAVE_DIALOG: GUID = GUID {
-    data1: 0xC0B4E2F3,
-    data2: 0xBA21,
-    data3: 0x4773,
-    data4: [0x8D, 0xBA, 0x33, 0x5E, 0xC9, 0x46, 0xEB, 0x8B],
-};
+const CLSID_FILE_SAVE_DIALOG: GUID =
+    GUID { data1: 0xC0B4E2F3, data2: 0xBA21, data3: 0x4773, data4: [0x8D, 0xBA, 0x33, 0x5E, 0xC9, 0x46, 0xEB, 0x8B] };
 
 // Raw CoCreateInstance ABI: (REFCLSID, LPUNKNOWN, DWORD, REFIID, LPVOID*) -> HRESULT
 type FnCoCreateInstance = unsafe extern "system" fn(
@@ -59,7 +51,7 @@ static mut GAVE_UP: bool = false;
 /// Only creates a mutex and does memory patching via retour — no LoadLibrary, no
 /// thread creation, no COM calls.
 pub unsafe fn install() -> Result<(), Box<dyn std::error::Error>> {
-    if !OWNER.is_invalid() || GAVE_UP {
+    if !std::ptr::addr_of!(OWNER).read().is_invalid() || GAVE_UP {
         return Ok(());
     }
     let name: Vec<u16> = format!("Local\\fzt-picker-detour-{}", GetCurrentProcessId())
@@ -101,7 +93,7 @@ pub unsafe fn install() -> Result<(), Box<dyn std::error::Error>> {
 /// Remove the detour if this copy owns it, and give up the claim.
 pub fn uninstall() {
     unsafe {
-        if OWNER.is_invalid() {
+        if std::ptr::addr_of!(OWNER).read().is_invalid() {
             return;
         }
         let _ = CoCreateInstanceDetour.disable();
@@ -148,10 +140,10 @@ mod tests {
     fn a_detached_copy_attaches_again() {
         unsafe {
             install().unwrap();
-            assert!(!OWNER.is_invalid());
+            assert!(!std::ptr::addr_of!(OWNER).read().is_invalid());
             assert!(CoCreateInstanceDetour.is_enabled());
             uninstall();
-            assert!(OWNER.is_invalid());
+            assert!(std::ptr::addr_of!(OWNER).read().is_invalid());
             assert!(!CoCreateInstanceDetour.is_enabled());
             install().unwrap();
             assert!(!GAVE_UP);

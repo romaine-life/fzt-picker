@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use windows::core::PCWSTR;
 use windows::Win32::Foundation::{HMODULE, HWND};
 use windows::Win32::System::LibraryLoader::{
-    GetModuleFileNameW, GetModuleHandleExW, GetProcAddress, LoadLibraryW,
-    GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+    GetModuleFileNameW, GetModuleHandleExW, GetProcAddress, LoadLibraryW, GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+    GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
 };
 
 /// Call the Go picker frontend DLL in-process.
@@ -25,8 +25,8 @@ pub fn run_picker(
 
     unsafe {
         let wide: Vec<u16> = dll_path.encode_utf16().chain(std::iter::once(0)).collect();
-        let hmod = LoadLibraryW(windows::core::PCWSTR(wide.as_ptr()))
-            .map_err(|e| format!("LoadLibrary failed: {e}"))?;
+        let hmod =
+            LoadLibraryW(windows::core::PCWSTR(wide.as_ptr())).map_err(|e| format!("LoadLibrary failed: {e}"))?;
 
         // char* PickFile(char* filter, int foldersOnly, char* startDir, uintptr_t hwndOwner)
         let pick_file_addr = GetProcAddress(hmod, windows::core::s!("PickFile"))
@@ -39,10 +39,7 @@ pub fn run_picker(
         let free_string: unsafe extern "C" fn(*mut i8) = std::mem::transmute(free_string_addr);
 
         let filter_cstr = filter.map(|f| CString::new(f).unwrap());
-        let filter_ptr = filter_cstr
-            .as_ref()
-            .map(|s| s.as_ptr())
-            .unwrap_or(std::ptr::null());
+        let filter_ptr = filter_cstr.as_ref().map(|s| s.as_ptr()).unwrap_or(std::ptr::null());
 
         let start_dir_cstr = CString::new(start_dir).unwrap();
         let folders_flag = if folders_only { 1 } else { 0 };
@@ -61,12 +58,7 @@ pub fn run_picker(
 
         crate::log(&format!("picker: PickFile returned: {result}"));
 
-        let paths: Vec<String> = result
-            .lines()
-            .map(|l| l.trim())
-            .filter(|l| !l.is_empty())
-            .map(String::from)
-            .collect();
+        let paths: Vec<String> = result.lines().map(|l| l.trim()).filter(|l| !l.is_empty()).map(String::from).collect();
 
         Ok(paths)
     }

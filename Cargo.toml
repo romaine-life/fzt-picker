@@ -1,0 +1,6 @@
+[workspace]
+resolver = "2"
+members = ["windows/handoff", "windows/hook", "windows/injector", "windows/shim", "windows/test-trigger"]
+
+[profile.release]
+panic = "abort"

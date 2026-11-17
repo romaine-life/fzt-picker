@@ -31,12 +31,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         let hmod = LoadLibraryW(PCWSTR(wide.as_ptr()))?;
         let hinstance: HINSTANCE = std::mem::transmute(hmod);
 
-        let hook_proc_addr = GetProcAddress(hmod, windows::core::s!("HookProc"))
-            .ok_or("HookProc not found in the shim")?;
+        let hook_proc_addr =
+            GetProcAddress(hmod, windows::core::s!("HookProc")).ok_or("HookProc not found in the shim")?;
         if !entry_is_first_code(hmod, hook_proc_addr as usize) {
             return Err(format!("{}: HookProc is not first in its code section (shim/build.rs)", paths.shim).into());
         }
-        let hook_proc: HOOKPROC = Some(std::mem::transmute(hook_proc_addr));
+        let hook_proc: HOOKPROC = Some(std::mem::transmute::<
+            unsafe extern "system" fn() -> isize,
+            unsafe extern "system" fn(i32, WPARAM, LPARAM) -> LRESULT,
+        >(hook_proc_addr));
 
         let hook = SetWindowsHookExW(WH_CBT, hook_proc, hinstance, 0).map_err(|e| {
             if e.code() == ERROR_MOD_NOT_FOUND.to_hresult() {
@@ -65,7 +68,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             class_name,
             PCWSTR::null(),
             WINDOW_STYLE(0),
-            0, 0, 0, 0,
+            0,
+            0,
+            0,
+            0,
             None,
             None,
             hinst,
@@ -75,10 +81,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         // Add tray icon
         let mut tip: [u16; 128] = [0; 128];
         for (i, c) in "fzt picker".encode_utf16().enumerate() {
-            if i < 127 { tip[i] = c; }
+            if i < 127 {
+                tip[i] = c;
+            }
         }
 
-        let icon = LoadIconW(hinst, PCWSTR(1 as *const u16))?;
+        let icon = LoadIconW(hinst, PCWSTR(std::ptr::without_provenance(1)))?;
 
         let mut nid = NOTIFYICONDATAW {
             cbSize: std::mem::size_of::<NOTIFYICONDATAW>() as u32,
@@ -108,12 +116,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-unsafe extern "system" fn tray_wnd_proc(
-    hwnd: HWND,
-    msg: u32,
-    wparam: WPARAM,
-    lparam: LPARAM,
-) -> LRESULT {
+unsafe extern "system" fn tray_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     match msg {
         WM_TRAYICON => {
             let event = (lparam.0 & 0xFFFF) as u32;
@@ -211,14 +214,24 @@ fn real_path(path: &std::path::Path) -> Result<std::path::PathBuf, Box<dyn std::
 mod tests {
     use super::*;
 
-    /// The release build of the shim CI ships: build it first (TESTING.md).
+    /// The shim as a release links it: /ORDER is a release link's, so the test builds the
+    /// release shim itself, in a target folder of its own beside the one running it (this
+    /// one's is locked while its tests run).
     #[test]
     fn the_shims_hook_procedure_comes_first() {
         let target = option_env!("CARGO_TARGET_DIR")
             .map(std::path::PathBuf::from)
-            .unwrap_or_else(|| std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../target"));
+            .unwrap_or_else(|| std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target"))
+            .join("shim-order");
+        let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+        let built = std::process::Command::new(cargo)
+            .args(["build", "-j", "4", "--locked", "--release", "-p", "fzt-picker-shim", "--target-dir"])
+            .arg(&target)
+            .current_dir(env!("CARGO_MANIFEST_DIR"))
+            .status()
+            .unwrap();
+        assert!(built.success(), "building the release shim failed");
         let shim = target.join("release").join("fzt_picker_shim.dll");
-        assert!(shim.exists(), "{} is missing: cargo build --release first", shim.display());
         let wide: Vec<u16> = shim.as_os_str().to_string_lossy().encode_utf16().chain(std::iter::once(0)).collect();
         unsafe {
             let module = LoadLibraryW(PCWSTR(wide.as_ptr())).unwrap();
@@ -238,7 +251,8 @@ mod tests {
             std::fs::write(version.join("fzt_picker_shim.dll"), b"").unwrap();
             std::fs::write(version.join("fzt_picker_hook.dll"), b"").unwrap();
         }
-        let made = std::process::Command::new("cmd").args(["/c", "mklink", "/J"]).arg(&current).arg(&v2).output().unwrap();
+        let made =
+            std::process::Command::new("cmd").args(["/c", "mklink", "/J"]).arg(&current).arg(&v2).output().unwrap();
         assert!(made.status.success(), "{made:?}");
         let real_v2 = real_path(&v2).unwrap();
         let through_current = paths_for(&current);

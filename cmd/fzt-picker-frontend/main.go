@@ -15,10 +15,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/romaine-life/fzt/core"
 	"github.com/romaine-life/fzt-terminal/tui"
+	"github.com/romaine-life/fzt/core"
 
-	"github.com/romaine-life/fzt-picker/frontend/picker"
+	"github.com/romaine-life/fzt-picker/picker"
 )
 
 func main() {

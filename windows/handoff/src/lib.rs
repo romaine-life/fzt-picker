@@ -72,14 +72,8 @@ impl Handoff {
         let name = wide(&mapping_name(shim_path));
         unsafe {
             let size = std::mem::size_of::<Shared>() as u32;
-            let mapping = Owned(CreateFileMappingW(
-                INVALID_HANDLE_VALUE,
-                None,
-                PAGE_READWRITE,
-                0,
-                size,
-                PCWSTR(name.as_ptr()),
-            )?);
+            let mapping =
+                Owned(CreateFileMappingW(INVALID_HANDLE_VALUE, None, PAGE_READWRITE, 0, size, PCWSTR(name.as_ptr()))?);
             let view = MapViewOfFile(mapping.0, FILE_MAP_ALL_ACCESS, 0, 0, 0);
             Self::from_view(view, mapping)
         }

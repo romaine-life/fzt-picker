@@ -14,7 +14,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// Stamped by build.yml with -ldflags -X. The linker ignores an -X naming a
+// Stamped by the release suite with -ldflags -X. The linker ignores an -X naming a
 // variable that doesn't exist, so a test holds the two together.
 var (
 	version     string // the release tag

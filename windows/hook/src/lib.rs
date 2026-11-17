@@ -10,6 +10,9 @@ pub(crate) use fzt_picker_handoff::log;
 
 /// Called by the shim on each hook event: install the detour unless another copy
 /// of this DLL owns it (hook::install).
+///
+/// # Safety
+/// Called by the shim from its hook procedure, on the thread of the event.
 #[no_mangle]
 pub unsafe extern "system" fn FztPickerAttach() {
     if let Err(e) = hook::install() {
@@ -18,6 +21,9 @@ pub unsafe extern "system" fn FztPickerAttach() {
 }
 
 /// Called by the shim when a newer release takes over, or when the injector stops.
+///
+/// # Safety
+/// Called by the shim, which holds this DLL loaded until the call returns.
 #[no_mangle]
 pub unsafe extern "system" fn FztPickerDetach() {
     hook::uninstall();

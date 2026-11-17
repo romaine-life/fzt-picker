@@ -3,8 +3,8 @@
 fzt's fuzzy finder as a file picker, in two forms, plus `fzt-files`, a file manager built from the same pieces:
 
 - **Windows dialog hook:** replaces the Windows file picker dialog (IFileOpenDialog). When any app opens File > Open, a fzt tree view appears instead of the standard dialog. Windows only.
-- **Standalone frontend:** a terminal picker in `frontend/`, on Windows (the `explore` at-command) and macOS (the work Mac's `launch-claude` runs it in a tmux pane).
-- **`fzt-files`:** file management by chained command palettes, in `frontend/fzt-files/`. Windows only. See [fzt-files](#fzt-files).
+- **Standalone frontend:** a terminal picker in `cmd/fzt-picker-frontend/`, on Windows (the `explore` at-command) and macOS (the work Mac's `launch-claude` runs it in a tmux pane).
+- **`fzt-files`:** file management by chained command palettes, in `cmd/fzt-files/`. Windows only. See [fzt-files](#fzt-files).
 
 Forgejo is the source: https://forgejo.romaine.life/romaine-life/fzt-picker. GitHub's `romaine-life/fzt-picker` is its push mirror, so a branch pushed there is overwritten, and a machine that can't reach Forgejo can't land a change here.
 
@@ -13,7 +13,7 @@ Forgejo is the source: https://forgejo.romaine.life/romaine-life/fzt-picker. Git
 The Windows dialog hook has two layers:
 
 - **COM hook (Rust, `windows/`)**: Hook DLL + injector. Intercepts `CoCreateInstance` for `IFileOpenDialog` via `retour` detours. Returns a COM proxy implementing `IFileOpenDialog`, `IFileDialog`, `IFileDialog2`, and `IFileDialogCustomize`. When `Show()` is called, loads the Go CGo DLL in-process and calls `PickFile()`.
-- **Frontend (Go, `frontend/cgo/`)**: CGo DLL (`fzt_picker_frontend.dll`) loaded in-process by the hook DLL. Creates a visible Win32 window owned by the host app, runs a headless fzt session (`tui.NewTreeSession`), renders via GDI `ExtTextOutW`, and runs a proper modal message loop (`GetMessage`/`DispatchMessage`). Uses `DirProvider` for lazy directory loading.
+- **Frontend (Go, `cmd/frontend-dll/`)**: CGo DLL (`fzt_picker_frontend.dll`) loaded in-process by the hook DLL. Creates a visible Win32 window owned by the host app, runs a headless fzt session (`tui.NewTreeSession`), renders via GDI `ExtTextOutW`, and runs a proper modal message loop (`GetMessage`/`DispatchMessage`). Uses `DirProvider` for lazy directory loading.
 
 ### Why a visible Win32 window?
 
@@ -85,11 +85,11 @@ Log: `%LOCALAPPDATA%\fzt-files\fzt-files.log`, through `log-search --app fzt-fil
 
 ### Shared vs rendering-specific code
 
-The CGo DLL and standalone binary share item loading, DirProvider setup, hidden file filtering, and session config via the `frontend/picker/` package:
+The CGo DLL and standalone binary share item loading, DirProvider setup, hidden file filtering, and session config via the `picker/` package:
 
-- **`frontend/picker/`** — shared: `DirProvider` (wraps `core.DirProvider` with hidden file filtering, which spares the start folder and the folders above it, and folder-only filtering; also sets `Item.Original = fullPath` on each item), `DriveRoots` (drive roots with `Original = "D:\"`, or `/` on macOS), `NewConfig` (shared tui.Config builder, which makes the `DirProvider` for the start folder), `HeaderItem`. Hidden-file rules are per OS: `hidden_windows.go` (hidden/system attributes), `hidden_darwin.go` (dot names and the `UF_HIDDEN` flag, as Finder hides them)
-- **`frontend/cgo/`** — CGo DLL: Win32 window + GDI rendering + modal message loop (COM hook path)
-- **`frontend/`** — standalone binary: `tui.Run()` via tcell (shell path, `explore` at-command). The only part that builds on macOS: the work Mac's `launch-claude` runs it in a tmux pane. `front_windows.go` brings the console window forward; `front_darwin.go` is a no-op.
+- **`picker/`** — shared: `DirProvider` (wraps `core.DirProvider` with hidden file filtering, which spares the start folder and the folders above it, and folder-only filtering; also sets `Item.Original = fullPath` on each item), `DriveRoots` (drive roots with `Original = "D:\"`, or `/` on macOS), `NewConfig` (shared tui.Config builder, which makes the `DirProvider` for the start folder), `HeaderItem`. Hidden-file rules are per OS: `hidden_windows.go` (hidden/system attributes), `hidden_darwin.go` (dot names and the `UF_HIDDEN` flag, as Finder hides them)
+- **`cmd/frontend-dll/`** — CGo DLL: Win32 window + GDI rendering + modal message loop (COM hook path)
+- **`cmd/fzt-picker-frontend/`** — standalone binary: `tui.Run()` via tcell (shell path, `explore` at-command). The only part that builds on macOS: the work Mac's `launch-claude` runs it in a tmux pane. `front_windows.go` brings the console window forward; `front_darwin.go` is a no-op.
 
 Both paths produce identical fzt sessions. Only the rendering surface differs.
 
@@ -99,33 +99,34 @@ Both paths return the selected item's `Item.Original`, its full filesystem path:
 
 ## Building
 
+The Go module and the Cargo workspace are at the repo root, as pipeline-templates' suites expect; the Rust crates stay in `windows/`. From the root, at most 4 cores on nelsonpc:
+
 ```sh
-# Rust (COM hook + injector)
-cd windows
-cargo build
+# Rust (COM hook + injector); rust-toolchain.toml selects the nightly
+cargo build -j 4
 
 # Go (CGo DLL) — requires GCC on PATH or CC env var
-cd frontend/cgo
-CGO_ENABLED=1 go build -buildmode=c-shared -o fzt_picker_frontend.dll .
+CGO_ENABLED=1 go build -p 4 -buildmode=c-shared -o fzt_picker_frontend.dll ./cmd/frontend-dll
 
 # Go (standalone frontend for 'explore' at-command)
-cd frontend
-go build -o fzt-picker-frontend.exe .
+go build -p 4 -o fzt-picker-frontend.exe ./cmd/fzt-picker-frontend
 
 # Go (fzt-files)
-go build -o fzt-files.exe ./fzt-files
+go build -p 4 -o fzt-files.exe ./cmd/fzt-files
 
 # Go (standalone frontend for the work Mac)
-GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o fzt-picker-frontend-darwin-arm64 .
+GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -p 4 -o fzt-picker-frontend-darwin-arm64 ./cmd/fzt-picker-frontend
 ```
 
-CI runs on Forgejo (`.forgejo/workflows/ci.yml`) on every pull request and main push; a pull request that changes only documentation skips its `windows` and `macos` jobs. Its `windows` job builds, checks imports, vets, tests and signs on upstairspc (host mode: rustup nightly, the machine's Go and WinLibs gcc). The macOS build runs on GitHub from the push mirror (`.github/workflows/macos.yml`, vet and `go test ./picker` on `macos-latest`); Forgejo's `macos` job waits for that run. A release runs the same build again in `.forgejo/workflows/build.yml` with the release tag, which uploads the Windows binaries and adds `fzt-picker-frontend-darwin-arm64` to the Forgejo release.
+CI is pipeline-templates' `go`, `rust` and `release` suites, with fzt-picker's settings in its `fleet.json` entry; `ci-check` runs their checks before a push. A pull request runs the checks whose files changed, on upstairspc's Windows runner: gofmt, `go vet` and `go test` (with the WinLibs gcc cgo needs), rustfmt, clippy (`-D warnings`) and `cargo test`, and the release build. A merge to main builds and releases: the next `v0.1.N`, the Rust binaries and the frontend DLL built on Windows (which fails if the DLL imports a MinGW runtime DLL), the Go programs and the Mac frontend cross-compiled on Linux, every Windows binary signed, then home-sync on every PC. A take-up of fzt or fzt-terminal comes from the Go suite once strip-owner delivers either.
+
+The Mac frontend also builds on GitHub from the push mirror (`.github/workflows/macos.yml`), which nothing on Forgejo waits for: every push vets it and runs `go test ./picker` on a real Mac (`hidden_darwin_test.go` runs only there), and the release tag, which the mirror carries once the Forgejo release publishes, gets a GitHub release holding `fzt-picker-frontend-darwin-arm64` for the work Mac, which can't reach Forgejo.
 
 Testing, including the file dialog on a hidden desktop so nothing reaches the screen: [TESTING.md](TESTING.md).
 
 ## Running
 
-After a complete Forgejo release, CI starts home-sync on every PC. It verifies all six signed Windows binaries, switches C:\Program Files\at-home\fzt-picker\current, and reconciles the tray injector and sign-in shortcut. Cut a release through Forgejo release.yml; the manual publish.ps1 was retired by HOMECFG-110.
+After a release, CI starts home-sync on every PC. It verifies all six signed Windows binaries, switches C:\Program Files\at-home\fzt-picker\current, and reconciles the tray injector and sign-in shortcut. Every merge that changes what the release builds is released; the manual publish.ps1 was retired by HOMECFG-110.
 
 ```sh
 # Standalone folder picker (used by the 'explore' at-command)
@@ -144,6 +145,10 @@ The shim and hook DLLs load into every GUI process and the frontend DLL into eve
 The injector, shim and hook DLL log to `%TEMP%\picker.log` with the host process PID prefix. Each log line is append + close to handle concurrent writes from multiple hooked processes.
 
 ## Changelog
+
+### 2026-11-17: CI from the suites
+
+- CI is pipeline-templates' `go`, `rust` and `release` suites; the repo's own Forgejo workflows are gone. The Go module and Cargo workspace moved to the root (`picker/`, `cmd/`), every merge that changes the build is released, the Rust code is held to rustfmt and clippy, and a take-up of fzt or fzt-terminal comes from the Go suite. The Mac build no longer holds up a pull request or a release: GitHub tests it on a real Mac and publishes it for the work Mac. Release asset names are unchanged. OpenProject PIPT-20.
 
 ### 2026-11-12: Every release starts
 

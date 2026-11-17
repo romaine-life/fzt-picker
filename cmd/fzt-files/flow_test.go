@@ -295,24 +295,23 @@ func TestEveryRowOnTheListDoesSomething(t *testing.T) {
 	}
 }
 
-func TestBuildYmlStampsEveryBuildVariable(t *testing.T) {
-	data, err := os.ReadFile(filepath.Join("..", "..", ".forgejo", "workflows", "build.yml"))
-	if err != nil {
-		t.Fatal(err)
-	}
+// The release suite (pipeline-templates' go/build.mjs) stamps main.version, buildRepo,
+// buildServer and buildTime with -X; a variable it doesn't stamp would read empty in every
+// release, and one renamed here would silently stop being stamped.
+func TestInfoReadsWhatTheReleaseStamps(t *testing.T) {
 	source, err := os.ReadFile("info.go")
 	if err != nil {
 		t.Fatal(err)
 	}
 	block := regexp.MustCompile(`(?s)var \(\n.*?\n\)`).Find([]byte(strings.ReplaceAll(string(source), "\r\n", "\n")))
+	var names []string
 	for _, line := range strings.Split(string(block), "\n")[1:] {
-		fields := strings.Fields(line)
-		if len(fields) < 2 {
-			continue
+		if fields := strings.Fields(line); len(fields) >= 2 {
+			names = append(names, fields[0])
 		}
-		if !strings.Contains(string(data), "-X main."+fields[0]+"=") {
-			t.Errorf("build.yml doesn't stamp %s", fields[0])
-		}
+	}
+	if got, want := strings.Join(names, " "), "version buildRepo buildServer buildTime"; got != want {
+		t.Errorf("info.go's build variables are %q, the release stamps %q", got, want)
 	}
 }
 

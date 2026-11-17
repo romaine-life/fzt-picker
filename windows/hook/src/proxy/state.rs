@@ -56,8 +56,6 @@ impl DialogState {
         } else {
             0
         };
-        self.file_types
-            .get(idx)
-            .map(|(_, pattern)| pattern.as_str())
+        self.file_types.get(idx).map(|(_, pattern)| pattern.as_str())
     }
 }

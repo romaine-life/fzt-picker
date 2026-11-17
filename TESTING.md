@@ -8,26 +8,25 @@ is about.
 
 | What changed | Run |
 | --- | --- |
-| `frontend/fzt-files` | [fzt-files](#fzt-files), then its real terminal check |
-| `frontend/cgo`, or a library bump | [The file dialog](#the-file-dialog) |
-| `windows/` | [The hook](#the-hook), after `cargo build -j 4 --release` and `cargo test -j 4 --release -p fzt-picker-handoff -p fzt-picker-hook -p fzt-picker-injector` |
-| `frontend/main.go`, `frontend/picker`, or a library bump | [The terminal picker](#the-terminal-picker) |
+| `cmd/fzt-files` | [fzt-files](#fzt-files), then its real terminal check |
+| `cmd/frontend-dll`, or a library bump | [The file dialog](#the-file-dialog) |
+| `windows/` | [The hook](#the-hook), after `cargo build -j 4 --release` and `cargo test -j 4 --workspace` (the injector's test builds the release shim itself) |
+| `cmd/fzt-picker-frontend`, `picker`, or a library bump | [The terminal picker](#the-terminal-picker) |
 
 Never point a test at real files.
 
 ## fzt-files
 
 ```sh
-cd frontend
-GOMAXPROCS=4 go vet ./fzt-files
-GOMAXPROCS=4 go test -p 4 ./picker ./fzt-files
-CGO_ENABLED=0 GOMAXPROCS=4 go build -p 4 -o dist/fzt-files.exe ./fzt-files
+GOMAXPROCS=4 go vet ./cmd/fzt-files
+GOMAXPROCS=4 go test -p 4 ./picker ./cmd/fzt-files
+CGO_ENABLED=0 GOMAXPROCS=4 go build -p 4 -o dist/fzt-files.exe ./cmd/fzt-files
 ```
 
 | Test file | Covers |
 | --- | --- |
-| `fzt-files/ops_test.go` | Never replacing a file, bad names, drives, a folder into itself, copies and their times, stopping a copy, moving between drives, links, what reaches the log |
-| `fzt-files/flow_test.go` | The sentence in the title, the rename selection, Escape stepping back, a failure asking again, delete's confirmation, a direct command's exit and output, `build.yml` stamping the info pane |
+| `cmd/fzt-files/ops_test.go` | Never replacing a file, bad names, drives, a folder into itself, copies and their times, stopping a copy, moving between drives, links, what reaches the log |
+| `cmd/fzt-files/flow_test.go` | The sentence in the title, the rename selection, Escape stepping back, a failure asking again, delete's confirmation, a direct command's exit and output, the release build's stamps in the info pane |
 
 `recycle` needs a real Recycle Bin, so it's checked by hand in the run below.
 
@@ -40,7 +39,7 @@ of the real log, which is copied to the NAS. Use a test folder of your own, such
 ```sh
 tmux-throwaway start ffqa -- -s q -x 90 -y 26
 MSYS_NO_PATHCONV=1 tmux -L ffqa set -g remain-on-exit on
-MSYS_NO_PATHCONV=1 tmux -L ffqa respawn-pane -k -t q -e 'FZT_FILES_DATA=<test folder>\data' '<worktree>\frontend\dist\fzt-files.exe --start-dir <test folder>'
+MSYS_NO_PATHCONV=1 tmux -L ffqa respawn-pane -k -t q -e 'FZT_FILES_DATA=<test folder>\data' '<worktree>\dist\fzt-files.exe --start-dir <test folder>'
 MSYS_NO_PATHCONV=1 tmux -L ffqa capture-pane -p -t q
 MSYS_NO_PATHCONV=1 tmux -L ffqa send-keys -t q -l 'rename file'
 MSYS_NO_PATHCONV=1 tmux -L ffqa send-keys -t q Enter
@@ -109,9 +108,9 @@ dialog, the hook swaps in fzt's, opened in the user folder, and the script goes 
 drive roots with Left, walks down by name and reports what came back.
 
 ```sh
-cd windows && cargo build -j 4 --release && cd ..
+cargo build -j 4 --release
 python=$(python -c "import sys;print(sys.executable)")
-trigger=$(cygpath -w "$PWD/windows/target/release/test-trigger.exe")
+trigger=$(cygpath -w "$PWD/target/release/test-trigger.exe")
 mkdir /tmp/fp-qa
 for s in file folder cancel; do
   python tools/hidden-desktop/hidden_launch.py "fp-hook-$s-$$" "\"$python\" $(cygpath -w "$PWD/tools/hidden-desktop/hook_test.py") $(cygpath -w /tmp/fp-qa) $s \"$trigger\""
@@ -136,9 +135,9 @@ and makes windows in between as an app does. After the first dialog it swaps `cu
 which release answered each dialog: it should be `v1`, then `v2`, `v2`.
 
 ```sh
-cd windows && cargo build -j 4 --release && cd ..
+cargo build -j 4 --release
 python=$(python -c "import sys;print(sys.executable)")
-build=$(cygpath -w "$PWD/windows/target/release")
+build=$(cygpath -w "$PWD/target/release")
 mkdir /tmp/fp-qa
 python tools/hidden-desktop/hidden_launch.py "fp-swap-$$" "\"$python\" $(cygpath -w "$PWD/tools/hidden-desktop/swap_test.py") $(cygpath -w /tmp/fp-qa) \"$build\" \"$build\\test-trigger.exe\""
 cat /tmp/fp-qa/swap.json

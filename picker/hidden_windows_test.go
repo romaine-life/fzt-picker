@@ -6,8 +6,8 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/romaine-life/fzt/core"
 	"github.com/romaine-life/fzt-terminal/tui"
+	"github.com/romaine-life/fzt/core"
 )
 
 // hiddenTree makes dir\hid\inner and dir\other, with hid and other hidden, and

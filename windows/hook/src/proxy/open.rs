@@ -10,7 +10,6 @@ use super::state::DialogState;
 
 // FOS flag constants
 const FOS_PICKFOLDERS: u32 = 0x20;
-const FOS_ALLOWMULTISELECT: u32 = 0x200;
 
 fn shell_item_to_path(si: &IShellItem) -> Option<String> {
     unsafe {
@@ -46,9 +45,7 @@ pub struct FileOpenDialogProxy {
 
 impl FileOpenDialogProxy {
     pub fn new() -> Self {
-        Self {
-            state: Mutex::new(DialogState::new()),
-        }
+        Self { state: Mutex::new(DialogState::new()) }
     }
 }
 
@@ -66,9 +63,7 @@ impl IModalWindow_Impl for FileOpenDialogProxy_Impl {
             start_dir = state.start_directory();
         }
 
-        crate::log(&format!(
-            "picker: Show() dir={start_dir} filter={filter:?} folders={pick_folders}"
-        ));
+        crate::log(&format!("picker: Show() dir={start_dir} filter={filter:?} folders={pick_folders}"));
 
         match crate::bridge::run_picker(filter.as_deref(), pick_folders, &start_dir, hwndowner) {
             Ok(paths) if !paths.is_empty() => {
@@ -199,11 +194,7 @@ impl IFileDialog_Impl for FileOpenDialogProxy_Impl {
 
     fn GetResult(&self) -> Result<IShellItem> {
         let state = self.state.lock().unwrap();
-        let path = state
-            .result_path
-            .as_ref()
-            .ok_or_else(|| Error::from(E_FAIL))?
-            .clone();
+        let path = state.result_path.as_ref().ok_or_else(|| Error::from(E_FAIL))?.clone();
         drop(state);
         path_to_shell_item(&path)
     }
@@ -302,8 +293,7 @@ impl IFileDialogCustomize_Impl for FileOpenDialogProxy_Impl {
         Ok(())
     }
     fn GetEditBoxText(&self, _dwidctl: u32) -> Result<*mut u16> {
-        alloc_pwstr("")
-            .map(|p| p.0)
+        alloc_pwstr("").map(|p| p.0)
     }
     fn SetEditBoxText(&self, _dwidctl: u32, _psztext: &PCWSTR) -> Result<()> {
         Ok(())

@@ -31,18 +31,16 @@ struct State {
     hook: Option<Hook>,
 }
 
-static mut STATE: State = State {
-    module: HMODULE(std::ptr::null_mut()),
-    handoff: None,
-    gave_up: false,
-    generation: 0,
-    hook: None,
-};
+static mut STATE: State =
+    State { module: HMODULE(std::ptr::null_mut()), handoff: None, gave_up: false, generation: 0, hook: None };
 
 /// Held by the one thread looking at STATE; another thread's event skips the work.
 static BUSY: AtomicBool = AtomicBool::new(false);
 
 /// The CBT hook procedure. build.rs puts it first in the code section.
+///
+/// # Safety
+/// Called by Windows as a CBT hook procedure, with that procedure's arguments.
 #[no_mangle]
 pub unsafe extern "system" fn HookProc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     if BUSY.compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed).is_ok() {

@@ -6,3 +6,4 @@ target/
 !*.go
 windows/target-trace/
 windows/target2/
+dist/

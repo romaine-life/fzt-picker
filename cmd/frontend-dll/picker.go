@@ -13,11 +13,11 @@ import (
 	"unsafe"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/romaine-life/fzt-terminal/tui"
 	"github.com/romaine-life/fzt/core"
 	"github.com/romaine-life/fzt/render"
-	"github.com/romaine-life/fzt-terminal/tui"
 
-	"github.com/romaine-life/fzt-picker/frontend/picker"
+	"github.com/romaine-life/fzt-picker/picker"
 )
 
 // Win32 API
@@ -93,7 +93,7 @@ const (
 	VK_ESCAPE           = 0x1B
 	VK_BACK             = 0x08
 	VK_TAB              = 0x09
-	VK_DELETE            = 0x2E
+	VK_DELETE           = 0x2E
 	VK_HOME             = 0x24
 	VK_END              = 0x23
 	VK_PRIOR            = 0x21 // Page Up
@@ -434,7 +434,7 @@ func createPickerWindow(title string) uintptr {
 	font, _, _ = createFontW.Call(
 		uintptr(uint32(fontSize)),
 		0, 0, 0,
-		400, // weight (normal)
+		400,     // weight (normal)
 		0, 0, 0, // italic, underline, strikeout
 		1, 0, 0, 0, // DEFAULT_CHARSET
 		uintptr(1), // FIXED_PITCH

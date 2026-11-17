@@ -44,8 +44,14 @@ fn live_for(gap: std::time::Duration) {
                 windows::core::w!("STATIC"),
                 windows::core::w!("test-trigger"),
                 WINDOW_STYLE(0),
-                0, 0, 10, 10,
-                None, None, None, None,
+                0,
+                0,
+                10,
+                10,
+                None,
+                None,
+                None,
+                None,
             ) {
                 let _ = DestroyWindow(hwnd);
             }
@@ -60,13 +66,9 @@ fn live_for(gap: std::time::Duration) {
 }
 
 fn open_dialog(folders_only: bool) -> Result<(), Box<dyn std::error::Error>> {
-    println!(
-        "test-trigger: calling CoCreateInstance for FileOpenDialog (folders_only={folders_only})..."
-    );
+    println!("test-trigger: calling CoCreateInstance for FileOpenDialog (folders_only={folders_only})...");
 
-    let dialog: IFileOpenDialog = unsafe {
-        CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER)?
-    };
+    let dialog: IFileOpenDialog = unsafe { CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER)? };
 
     if folders_only {
         unsafe {

@@ -1,9 +1,13 @@
-# The standalone frontend for the work Mac (launch-claude in a tmux pane).
+# The standalone frontend for the work Mac (launch-claude in a tmux pane), which can't
+# reach Forgejo.
 #
-# The rest of CI runs on Forgejo (.forgejo/workflows/build.yml). This runs on
-# GitHub from Forgejo's push mirror; Forgejo's macos job waits for it and adds
-# its build to the Forgejo release. A release tag also gets a GitHub release
-# holding the macOS build, for machines that can't reach Forgejo.
+# CI runs on Forgejo from pipeline-templates' suites; the Forgejo release carries the
+# same Mac build, cross-compiled there. This runs on GitHub from Forgejo's push mirror,
+# and nothing on Forgejo waits for it:
+# - every push: vet and test the Mac code on a real Mac (picker/hidden_darwin_test.go
+#   runs only there);
+# - a release tag, which the mirror carries after the Forgejo release publishes: a
+#   GitHub release holding the Mac build, for the work Mac.
 name: macOS
 
 on:
@@ -16,7 +20,8 @@ permissions:
   contents: write
 
 jobs:
-  macos:
+  test:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     runs-on: macos-latest
 
     steps:
@@ -24,33 +29,37 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version-file: frontend/go.mod
-          cache-dependency-path: frontend/go.sum
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
 
       - name: Vet
-        working-directory: frontend
-        run: go vet . ./picker
+        run: go vet ./cmd/fzt-picker-frontend ./picker
 
       - name: Test
-        working-directory: frontend
         run: go test ./picker
 
-      - name: Build standalone frontend
-        working-directory: frontend
+  # A pure-Go build (no cgo), so Linux builds it for the Mac: GitHub's Mac runners can
+  # take a quarter hour to start.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Build the Mac frontend
         env:
           CGO_ENABLED: "0"
           GOOS: darwin
           GOARCH: arm64
-        run: go build -o fzt-picker-frontend-darwin-arm64 .
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: fzt-picker-frontend-darwin-arm64
-          path: frontend/fzt-picker-frontend-darwin-arm64
-          if-no-files-found: error
+        run: go build -trimpath -ldflags "-s -w" -o fzt-picker-frontend-darwin-arm64 ./cmd/fzt-picker-frontend
 
       - name: Add to the GitHub release
-        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: romaine-life/fzt-picker
@@ -58,4 +67,4 @@ jobs:
           gh release view "$GITHUB_REF_NAME" --repo "$REPO" > /dev/null 2>&1 ||
             gh release create "$GITHUB_REF_NAME" --repo "$REPO" --verify-tag --title "$GITHUB_REF_NAME" \
               --notes "macOS build. The Windows binaries are released on Forgejo: https://forgejo.romaine.life/romaine-life/fzt-picker/releases/tag/$GITHUB_REF_NAME"
-          gh release upload "$GITHUB_REF_NAME" frontend/fzt-picker-frontend-darwin-arm64 --clobber --repo "$REPO"
+          gh release upload "$GITHUB_REF_NAME" fzt-picker-frontend-darwin-arm64 --clobber --repo "$REPO"

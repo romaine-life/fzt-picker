@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/romaine-life/fzt-picker/frontend/picker"
+	"github.com/romaine-life/fzt-picker/picker"
 	"github.com/romaine-life/fzt-terminal/tui"
 	"github.com/romaine-life/fzt/core"
 )
