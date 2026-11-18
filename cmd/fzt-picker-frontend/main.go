@@ -1,3 +1,5 @@
+//go:build windows || darwin
+
 // fzt-picker-frontend — fzt-powered file picker TUI.
 //
 // Standalone frontend for the picker. Uses DirProvider for lazy tree browsing

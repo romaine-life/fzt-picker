@@ -1,3 +1,5 @@
+//go:build windows
+
 // fzt-files is a file manager made of chained command palettes: pick a command
 // from a list, then fzt asks for each thing it needs, so there are no keys to
 // memorize. A program can skip the list and land on one command with
