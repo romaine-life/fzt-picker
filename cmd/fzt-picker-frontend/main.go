@@ -31,6 +31,9 @@ func main() {
 	args := os.Args[1:]
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
+		case "--version":
+			printVersion(os.Stdout)
+			return
 		case "--folders-only":
 			foldersOnly = true
 		case "--title":
