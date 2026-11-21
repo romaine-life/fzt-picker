@@ -368,11 +368,15 @@ func wndProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 			handleKeyInput(tcell.KeyRune, ch)
 			return 0
 		}
-		// Ctrl+C (0x03) is fzt's one Ctrl binding: it closes the picker
-		// from any folder (FZT2-7). Other control codes from Ctrl+letter
-		// combos are ignored.
-		if ch == 0x03 {
+		// fzt's Ctrl bindings: Ctrl+C (0x03) closes the picker from any
+		// folder (FZT2-7), Ctrl+U (0x15) erases the search line (FT-13).
+		// Other control codes from Ctrl+letter combos are ignored.
+		switch ch {
+		case 0x03:
 			handleKeyInput(tcell.KeyCtrlC, 0)
+			return 0
+		case 0x15:
+			handleKeyInput(tcell.KeyCtrlU, 0)
 			return 0
 		}
 	case WM_PAINT:
