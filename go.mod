@@ -20,7 +20,7 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/romaine-life/auth v0.1.65 // indirect
+	github.com/romaine-life/auth v0.1.66 // indirect
 	github.com/romaine-life/fzt-frontend v0.1.85 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/term v0.47.0 // indirect
