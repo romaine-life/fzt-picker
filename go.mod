@@ -21,7 +21,7 @@ require (
 	github.com/mtibben/percent v0.2.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/romaine-life/auth v0.1.68 // indirect
-	github.com/romaine-life/fzt-frontend v0.1.88 // indirect
+	github.com/romaine-life/fzt-frontend v0.1.89 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/term v0.47.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
