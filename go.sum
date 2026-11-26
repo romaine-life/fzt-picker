@@ -38,6 +38,8 @@ github.com/romaine-life/fzt-frontend v0.1.90 h1:un/RiHEUyqa21ezl8qKm03LgE/Z2arAM
 github.com/romaine-life/fzt-frontend v0.1.90/go.mod h1:VAcAGXH12p2B+xJkoQ1udb60JhzQVPyltSAz7T8kXBM=
 github.com/romaine-life/fzt-terminal v0.1.206 h1:9TO1uJWfbeDWOJBVI/Z2fplObTn+JCI8ose/QL8F3xQ=
 github.com/romaine-life/fzt-terminal v0.1.206/go.mod h1:II9kxEnvPfvc+S2/6/lMuJ3KqnFkzLJm3Jn6H8Qiqu8=
+github.com/romaine-life/logline v0.1.5 h1:z1b1u03xHjU83gh3KqXjvHO3vw1bTWO39XJyUBYezf4=
+github.com/romaine-life/logline v0.1.5/go.mod h1:zJcP0wuqoC+eolAaPsbT7rD+Ia9tHkPLeAiFXuh6jbo=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.3.0 h1:NGXK3lHquSN08v5vWalVI/L8XU9hdzE/G6xsrze47As=
 github.com/stretchr/objx v0.3.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoHMkEqE=

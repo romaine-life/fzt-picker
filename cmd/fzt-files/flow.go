@@ -419,10 +419,12 @@ func (f *flow) finish(c *command, result outcome, err error) {
 	f.cancel()
 	f.menu.OnAbort(nil)
 	if err != nil {
-		logEvent("%s failed: %s", c.verb, logReason(err))
 		message := err.Error()
-		if logReason(err) == "stopped" {
+		if reason := logReason(err); reason == "stopped" {
+			appLog().Info("command stopped", "command", c.verb)
 			message = "Stopped. Nothing was left behind."
+		} else {
+			appLog().Error("command failed", "command", c.verb, "reason", reason)
 		}
 		f.menu.Update(func(s *core.State) {
 			s.Unfreeze()
@@ -431,7 +433,7 @@ func (f *flow) finish(c *command, result outcome, err error) {
 		f.repeatLast()
 		return
 	}
-	logEvent("%s done", c.verb)
+	appLog().Info("command done", "command", c.verb)
 	if f.direct {
 		f.output = result.path
 		f.menu.Close()

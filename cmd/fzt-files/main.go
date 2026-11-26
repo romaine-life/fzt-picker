@@ -12,7 +12,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 
 	"github.com/romaine-life/fzt-terminal/tui"
 )
@@ -81,12 +80,7 @@ func main() {
 }
 
 func start(args []string) int {
-	defer func() {
-		if r := recover(); r != nil {
-			logEvent("panic: %v | %s", r, debug.Stack())
-			panic(r)
-		}
-	}()
+	defer appLog().Panic()
 	if len(args) == 1 && (args[0] == "help" || args[0] == "--help" || args[0] == "-h") {
 		fmt.Print(usage)
 		return 0
@@ -118,7 +112,7 @@ func start(args []string) int {
 			return 1
 		}
 	}
-	logEvent("start direct=%t", chosen != nil)
+	appLog().Info("start", "direct", chosen != nil)
 	setWindowTitle(title)
 	items, cfg := homeItems(list), homeConfig()
 	if chosen != nil {
@@ -131,7 +125,7 @@ func start(args []string) int {
 		}
 	}, func(p tui.Pick, _ *tui.Live) { f.onPick(p) })
 	if err != nil {
-		logEvent("the terminal wouldn't open")
+		appLog().Error("the terminal wouldn't open")
 		fmt.Fprintf(os.Stderr, "fzt-files: %v\n", err)
 		return 1
 	}

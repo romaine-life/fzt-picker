@@ -12,6 +12,7 @@ import (
 
 	"github.com/romaine-life/fzt-terminal/tui"
 	"github.com/romaine-life/fzt/core"
+	"github.com/romaine-life/logline"
 	"golang.org/x/sys/windows"
 )
 
@@ -317,10 +318,10 @@ func TestInfoReadsWhatTheReleaseStamps(t *testing.T) {
 	}
 }
 
-func TestLogLinesStartWithATimeAndHoldNoNewline(t *testing.T) {
+func TestLogLinesAreTheStandardLineAndHoldNoNewline(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv(dataEnv, dir)
-	logEvent("rename failed:\n%s", "name taken")
+	appLog().Error("command failed", "command", "rename", "reason", "name\ntaken")
 	data, err := os.ReadFile(filepath.Join(dir, "fzt-files.log"))
 	if err != nil {
 		t.Fatal(err)
@@ -329,7 +330,11 @@ func TestLogLinesStartWithATimeAndHoldNoNewline(t *testing.T) {
 	if strings.Contains(line, "\n") {
 		t.Fatalf("line = %q", line)
 	}
-	if _, err := time.Parse(time.RFC3339, strings.Fields(line)[0]); err != nil {
+	entry, err := logline.Parse(line)
+	if err != nil {
 		t.Fatalf("line = %q: %v", line, err)
+	}
+	if entry.Level != logline.Error || entry.Message != "command failed" {
+		t.Fatalf("line = %q", line)
 	}
 }

@@ -13,6 +13,7 @@ import (
 	_ "time/tzdata" // A PC without Go has no zone database to load Pacific time from.
 	"unsafe"
 
+	"github.com/romaine-life/logline"
 	"golang.org/x/sys/windows"
 )
 
@@ -28,7 +29,6 @@ var (
 const (
 	unstamped = "development build, not from CI"
 	reposRoot = `D:\repos`
-	logLimit  = 1 << 20
 	dataEnv   = "FZT_FILES_DATA"
 )
 
@@ -139,25 +139,15 @@ func dataDir() string {
 	return filepath.Join(dir, "fzt-files")
 }
 
-// logEvent appends one line and closes the file, so log-ship sees it at once.
-// A line never holds a path or a name: the log is copied to the NAS.
-func logEvent(format string, args ...any) {
+func logPath() string {
 	dir := dataDir()
 	if dir == "" {
-		return
+		return ""
 	}
-	path := filepath.Join(dir, "fzt-files.log")
-	if info, err := os.Stat(path); err == nil && info.Size() > logLimit {
-		_ = os.Rename(path, path+".old")
-	}
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return
-	}
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-	message := strings.ReplaceAll(fmt.Sprintf(format, args...), "\n", " | ")
-	fmt.Fprintf(file, "%s pid=%d %s\n", time.Now().Format(time.RFC3339), os.Getpid(), message)
+	return filepath.Join(dir, "fzt-files.log")
 }
+
+// appLog is this PC's log, in the estate's one line (logline, AHT-204): a level, a
+// fixed message and what varies as key=value fields, appended and closed so log-ship
+// sees it at once. A line never holds a path or a name: the log is copied to the NAS.
+func appLog() *logline.Logger { return logline.OpenFile(logPath()) }
