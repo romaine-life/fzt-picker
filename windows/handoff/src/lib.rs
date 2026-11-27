@@ -144,18 +144,66 @@ impl Handoff {
     }
 }
 
-/// Append a line to %TEMP%\picker.log, prefixed with the process ID. Opened and
-/// closed each time, since every hooked process writes to it.
-pub fn log(msg: &str) {
-    use std::io::Write;
-    let Ok(temp) = std::env::var("TEMP") else {
-        return;
-    };
-    let path = std::path::Path::new(&temp).join("picker.log");
-    let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&path) else {
-        return;
-    };
-    let _ = writeln!(f, "[{}] {msg}", std::process::id());
+/// The picker's log, `%LOCALAPPDATA%\fzt-picker\fzt-picker.log` (`FZT_PICKER_LOG` names
+/// another file, for tests), which log-ship sends to the pile. The injector, the shim and
+/// the hook write it from every process they run in, each line the house's one log line
+/// (logline, AHT-204) with that process's pid. logline opens and closes the file for each
+/// line, so lines from many processes never split, and moves it to `.old` past 1 MiB.
+pub mod log {
+    use std::fmt::Display;
+    use std::sync::OnceLock;
+
+    use logline::{Level, Logger};
+
+    static LOG: OnceLock<Logger> = OnceLock::new();
+
+    pub fn info(msg: &str, fields: &[(&str, &dyn Display)]) {
+        write(Level::Info, msg, fields);
+    }
+
+    pub fn warn(msg: &str, fields: &[(&str, &dyn Display)]) {
+        write(Level::Warn, msg, fields);
+    }
+
+    pub fn error(msg: &str, fields: &[(&str, &dyn Display)]) {
+        write(Level::Error, msg, fields);
+    }
+
+    fn write(level: Level, msg: &str, fields: &[(&str, &dyn Display)]) {
+        write_to(logger(), level, msg, fields);
+    }
+
+    fn logger() -> &'static Logger {
+        LOG.get_or_init(|| Logger::open("fzt-picker", "FZT_PICKER_LOG"))
+    }
+
+    /// The shim's lines, whose fields are only the hook path the injector published and
+    /// Windows' own error messages, so they skip `redact`: its patterns would add 1.3 MB
+    /// to the shim, which every GUI process loads.
+    pub mod unmasked {
+        use super::*;
+
+        pub fn info(msg: &str, fields: &[(&str, &dyn Display)]) {
+            logger().log(Level::Info, msg, fields);
+        }
+
+        pub fn warn(msg: &str, fields: &[(&str, &dyn Display)]) {
+            logger().log(Level::Warn, msg, fields);
+        }
+
+        pub fn error(msg: &str, fields: &[(&str, &dyn Display)]) {
+            logger().log(Level::Error, msg, fields);
+        }
+    }
+
+    /// Values are Windows' errors and the paths and filters an app passed: outside
+    /// text, so each goes through logline's `redact` first.
+    pub(crate) fn write_to(log: &Logger, level: Level, msg: &str, fields: &[(&str, &dyn Display)]) {
+        let values: Vec<String> = fields.iter().map(|(_, v)| logline::redact(&v.to_string())).collect();
+        let fields: Vec<(&str, &dyn Display)> =
+            fields.iter().zip(&values).map(|((k, _), v)| (*k, v as &dyn Display)).collect();
+        log.log(level, msg, &fields);
+    }
 }
 
 #[cfg(test)]
@@ -204,5 +252,31 @@ mod tests {
     fn a_path_too_long_is_refused() {
         let injector = Handoff::create(&shim("long")).unwrap();
         assert!(injector.publish(&"x".repeat(PATH_UNITS + 1)).is_err());
+    }
+
+    #[test]
+    fn a_log_line_is_the_standard_one_and_masked() {
+        let dir = std::env::temp_dir().join(format!("fzt-picker-log-{}", std::process::id()));
+        let path = dir.join("fzt-picker.log");
+        let _ = std::fs::remove_dir_all(&dir);
+        let log = logline::Logger::open_file(&path);
+        log::write_to(
+            &log,
+            logline::Level::Error,
+            "shim can't load",
+            &[("path", &r"C:\v2\hook.dll"), ("error", &"https://u:hunter2@x/y")],
+        );
+        log::write_to(&log, logline::Level::Info, "dialog call", &[("method", &"SetFileTypes")]);
+        let text = std::fs::read_to_string(&path).unwrap();
+        let lines: Vec<_> = text.lines().collect();
+        assert_eq!(lines.len(), 2, "{text}");
+        let first = logline::parse(lines[0]).unwrap();
+        assert_eq!(first.level, logline::Level::Error);
+        assert_eq!(first.pid, std::process::id());
+        assert_eq!(first.message, "shim can't load");
+        assert_eq!(first.fields[0], ("path".into(), r"C:\v2\hook.dll".into()));
+        assert!(!text.contains("hunter2"), "{text}");
+        assert!(lines[1].ends_with(" info dialog call method=SetFileTypes"), "{text}");
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

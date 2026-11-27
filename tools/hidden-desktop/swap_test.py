@@ -7,7 +7,7 @@ home-sync installs them. It starts the injector through `current`, then an app
 (test-trigger --repeat) that opens a dialog every five seconds and lives like a
 program in between. After the first dialog it swaps `current` to v2 and restarts
 the injector, as a release does. With no dialog DLL beside the hook, each dialog
-fails at once, and picker.log names the folder that copy of the hook looked in,
+fails at once, and the picker's log names the folder that copy of the hook looked in,
 so the report shows which release answered each dialog. After the swap it should
 be v2. With `overlap`, the new injector starts before the old one stops, so the
 app's shim never unloads and moves the detour to v2 in place.
@@ -26,7 +26,7 @@ folder, build, trigger = map(pathlib.Path, sys.argv[1:4])
 overlap = sys.argv[4:5] == ["overlap"]
 sys.excepthook = lambda kind, value, tb: (folder / "swap-error.txt").write_text(
     "".join(__import__("traceback").format_exception(kind, value, tb)))
-log = pathlib.Path(os.environ["TEMP"]) / "picker.log"
+log = pathlib.Path(os.environ["LOCALAPPDATA"]) / "fzt-picker" / "fzt-picker.log"
 root = folder / "swap"
 current = root / "current"
 for version in ("v1", "v2"):
@@ -61,8 +61,8 @@ with open(log, "rb") as f:
     f.seek(start)
     lines = f.read().decode(errors="replace").splitlines()
 answered = [m.group(1).rsplit("\\", 1)[-1]
-            for line in lines if line.startswith(f"[{app.pid}]")
-            for m in [re.search(r"not beside the hook in (.+)$", line)] if m]
+            for line in lines if f" pid={app.pid} " in line
+            for m in [re.search(r'not beside the hook in (.+?)"?$', line)] if m]
 report = {"answered by": answered, "passed": answered[:1] == ["v1"] and answered[1:] == ["v2"] * (len(answered) - 1) and len(answered) == 3}
 (folder / "swap.json").write_text(json.dumps(report, indent=1))
 os.rmdir(current)

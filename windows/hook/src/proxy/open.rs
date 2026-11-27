@@ -63,7 +63,10 @@ impl IModalWindow_Impl for FileOpenDialogProxy_Impl {
             start_dir = state.start_directory();
         }
 
-        crate::log(&format!("picker: Show() dir={start_dir} filter={filter:?} folders={pick_folders}"));
+        crate::log::info(
+            "Show",
+            &[("dir", &start_dir), ("filter", &filter.as_deref().unwrap_or("")), ("folders", &pick_folders)],
+        );
 
         match crate::bridge::run_picker(filter.as_deref(), pick_folders, &start_dir, hwndowner) {
             Ok(paths) if !paths.is_empty() => {
@@ -74,7 +77,7 @@ impl IModalWindow_Impl for FileOpenDialogProxy_Impl {
             }
             Ok(_) => Err(Error::from(HRESULT::from_win32(ERROR_CANCELLED.0))),
             Err(e) => {
-                crate::log(&format!("picker: frontend failed: {e}"));
+                crate::log::error("frontend failed", &[("error", &e)]);
                 Err(Error::from(HRESULT::from_win32(ERROR_CANCELLED.0)))
             }
         }
@@ -83,7 +86,7 @@ impl IModalWindow_Impl for FileOpenDialogProxy_Impl {
 
 impl IFileDialog_Impl for FileOpenDialogProxy_Impl {
     fn SetFileTypes(&self, cfiletypes: u32, rgfilterspec: *const COMDLG_FILTERSPEC) -> Result<()> {
-        crate::log("picker: -> SetFileTypes");
+        crate::log::info("dialog call", &[("method", &"SetFileTypes")]);
         let mut state = self.state.lock().unwrap();
         state.file_types = unsafe {
             std::slice::from_raw_parts(rgfilterspec, cfiletypes as usize)
@@ -99,39 +102,39 @@ impl IFileDialog_Impl for FileOpenDialogProxy_Impl {
     }
 
     fn SetFileTypeIndex(&self, ifiletype: u32) -> Result<()> {
-        crate::log("picker: -> SetFileTypeIndex");
+        crate::log::info("dialog call", &[("method", &"SetFileTypeIndex")]);
         self.state.lock().unwrap().file_type_index = ifiletype;
         Ok(())
     }
 
     fn GetFileTypeIndex(&self) -> Result<u32> {
-        crate::log("picker: -> GetFileTypeIndex");
+        crate::log::info("dialog call", &[("method", &"GetFileTypeIndex")]);
         Ok(self.state.lock().unwrap().file_type_index)
     }
 
     fn Advise(&self, _pfde: Option<&IFileDialogEvents>) -> Result<u32> {
-        crate::log("picker: -> Advise");
+        crate::log::info("dialog call", &[("method", &"Advise")]);
         Ok(0)
     }
 
     fn Unadvise(&self, _dwcookie: u32) -> Result<()> {
-        crate::log("picker: -> Unadvise");
+        crate::log::info("dialog call", &[("method", &"Unadvise")]);
         Ok(())
     }
 
     fn SetOptions(&self, fos: FILEOPENDIALOGOPTIONS) -> Result<()> {
-        crate::log(&format!("picker: -> SetOptions(0x{:X})", fos.0));
+        crate::log::info("dialog call", &[("method", &"SetOptions"), ("options", &format!("0x{:X}", fos.0))]);
         self.state.lock().unwrap().options = fos.0;
         Ok(())
     }
 
     fn GetOptions(&self) -> Result<FILEOPENDIALOGOPTIONS> {
-        crate::log("picker: -> GetOptions");
+        crate::log::info("dialog call", &[("method", &"GetOptions")]);
         Ok(FILEOPENDIALOGOPTIONS(self.state.lock().unwrap().options))
     }
 
     fn SetDefaultFolder(&self, psi: Option<&IShellItem>) -> Result<()> {
-        crate::log("picker: -> SetDefaultFolder");
+        crate::log::info("dialog call", &[("method", &"SetDefaultFolder")]);
         if let Some(si) = psi {
             if let Some(path) = shell_item_to_path(si) {
                 self.state.lock().unwrap().default_folder = Some(path);
@@ -141,7 +144,7 @@ impl IFileDialog_Impl for FileOpenDialogProxy_Impl {
     }
 
     fn SetFolder(&self, psi: Option<&IShellItem>) -> Result<()> {
-        crate::log("picker: -> SetFolder");
+        crate::log::info("dialog call", &[("method", &"SetFolder")]);
         if let Some(si) = psi {
             if let Some(path) = shell_item_to_path(si) {
                 self.state.lock().unwrap().folder = Some(path);
@@ -151,7 +154,7 @@ impl IFileDialog_Impl for FileOpenDialogProxy_Impl {
     }
 
     fn GetFolder(&self) -> Result<IShellItem> {
-        crate::log("picker: -> GetFolder");
+        crate::log::info("dialog call", &[("method", &"GetFolder")]);
         let state = self.state.lock().unwrap();
         let dir = state.start_directory();
         drop(state);
@@ -159,12 +162,12 @@ impl IFileDialog_Impl for FileOpenDialogProxy_Impl {
     }
 
     fn GetCurrentSelection(&self) -> Result<IShellItem> {
-        crate::log("picker: -> GetCurrentSelection");
+        crate::log::info("dialog call", &[("method", &"GetCurrentSelection")]);
         self.GetResult()
     }
 
     fn SetFileName(&self, pszname: &PCWSTR) -> Result<()> {
-        crate::log("picker: -> SetFileName");
+        crate::log::info("dialog call", &[("method", &"SetFileName")]);
         let name = unsafe { pszname.to_string().unwrap_or_default() };
         self.state.lock().unwrap().file_name = Some(name);
         Ok(())

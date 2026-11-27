@@ -15,7 +15,7 @@ const IDM_EXIT: u16 = 1;
 /// A windowed program has nowhere to print, so a failure to start goes to the log.
 fn main() {
     if let Err(e) = run() {
-        log(&format!("picker: injector can't start: {e}"));
+        log::error("injector can't start", &[("error", &e)]);
         std::process::exit(1);
     }
 }
@@ -48,7 +48,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 format!("SetWindowsHookEx: {e}")
             }
         })?;
-        log(&format!("picker: injector hooked {} for {}", paths.shim, paths.hook));
+        log::info("injector hooked", &[("shim", &paths.shim), ("hook", &paths.hook)]);
 
         // Create hidden window for tray messages
         let hinst = GetModuleHandleW(None)?;

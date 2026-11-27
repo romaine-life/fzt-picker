@@ -16,7 +16,7 @@ pub(crate) use fzt_picker_handoff::log;
 #[no_mangle]
 pub unsafe extern "system" fn FztPickerAttach() {
     if let Err(e) = hook::install() {
-        log(&format!("picker: hook install failed: {e}"));
+        log::error("hook install failed", &[("error", &e)]);
     }
 }
 

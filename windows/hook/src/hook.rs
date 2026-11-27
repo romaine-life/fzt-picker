@@ -86,7 +86,7 @@ pub unsafe fn install() -> Result<(), Box<dyn std::error::Error>> {
         return Err(e);
     }
     OWNER = claim;
-    crate::log("picker: CoCreateInstance hook installed");
+    crate::log::info("CoCreateInstance hook installed", &[]);
     Ok(())
 }
 
@@ -112,17 +112,17 @@ unsafe fn hooked_co_create_instance(
     let clsid = &*rclsid;
 
     if *clsid == CLSID_FILE_OPEN_DIALOG {
-        crate::log("picker: intercepted FileOpenDialog");
+        crate::log::info("intercepted FileOpenDialog", &[]);
         match proxy::create_file_open_dialog(riid, ppv) {
             Ok(hr) => return hr,
             Err(e) => {
-                crate::log(&format!("picker: proxy creation failed, falling back: {e}"));
+                crate::log::warn("proxy creation failed, falling back", &[("error", &e)]);
             }
         }
     }
 
     if *clsid == CLSID_FILE_SAVE_DIALOG {
-        crate::log("picker: intercepted FileSaveDialog (pass-through for now)");
+        crate::log::info("intercepted FileSaveDialog, passed through", &[]);
         // Phase 3: return proxy::create_file_save_dialog(riid, ppv)
     }
 

@@ -19,9 +19,10 @@ pub fn run_picker(
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let dll_path = find_picker_dll()?;
 
-    crate::log(&format!(
-        "picker: loading frontend DLL ({dll_path}) filter={filter:?} folders={folders_only} dir={start_dir}"
-    ));
+    crate::log::info(
+        "loading frontend",
+        &[("dll", &dll_path), ("filter", &filter.unwrap_or("")), ("folders", &folders_only), ("dir", &start_dir)],
+    );
 
     unsafe {
         let wide: Vec<u16> = dll_path.encode_utf16().chain(std::iter::once(0)).collect();
@@ -45,18 +46,18 @@ pub fn run_picker(
         let folders_flag = if folders_only { 1 } else { 0 };
         let hwnd_val = owner_hwnd.0 as usize;
 
-        crate::log("picker: calling PickFile");
+        crate::log::info("calling PickFile", &[]);
         let result_ptr = pick_file(filter_ptr, folders_flag, start_dir_cstr.as_ptr(), hwnd_val);
 
         if result_ptr.is_null() {
-            crate::log("picker: PickFile returned null (cancelled)");
+            crate::log::info("PickFile cancelled", &[]);
             return Ok(vec![]);
         }
 
         let result = CStr::from_ptr(result_ptr).to_string_lossy().to_string();
         free_string(result_ptr);
 
-        crate::log(&format!("picker: PickFile returned: {result}"));
+        crate::log::info("PickFile returned", &[("result", &result)]);
 
         let paths: Vec<String> = result.lines().map(|l| l.trim()).filter(|l| !l.is_empty()).map(String::from).collect();
 

@@ -58,7 +58,10 @@ unsafe fn follow_handoff(state: &mut State) {
         match own_path(state.module).and_then(|path| Handoff::open(&path).map_err(|e| e.to_string())) {
             Ok(handoff) => state.handoff = Some(handoff),
             Err(e) => {
-                log(&format!("picker: shim can't read the handoff, so this process keeps the system dialog: {e}"));
+                log::unmasked::warn(
+                    "shim can't read the handoff, so this process keeps the system dialog",
+                    &[("error", &e)],
+                );
                 state.gave_up = true;
                 return;
             }
@@ -74,10 +77,10 @@ unsafe fn follow_handoff(state: &mut State) {
                         if let Some(old) = state.hook.take() {
                             (old.detach)();
                         }
-                        log(&format!("picker: shim loaded {path}"));
+                        log::unmasked::info("shim loaded", &[("path", &path)]);
                         state.hook = Some(hook);
                     }
-                    Err(e) => log(&format!("picker: shim can't load {path}: {e}")),
+                    Err(e) => log::unmasked::error("shim can't load", &[("path", &path), ("error", &e)]),
                 }
             }
         }

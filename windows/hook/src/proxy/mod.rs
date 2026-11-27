@@ -14,10 +14,10 @@ pub unsafe fn create_file_open_dialog(
     riid: *const GUID,
     ppv: *mut *mut c_void,
 ) -> Result<HRESULT, Box<dyn std::error::Error>> {
-    crate::log(&format!("picker: create_file_open_dialog riid={:?}", *riid));
+    crate::log::info("create_file_open_dialog", &[("riid", &format!("{:?}", *riid))]);
     let proxy = open::FileOpenDialogProxy::new();
     let unknown: windows::core::IUnknown = proxy.into();
     let hr = unknown.query(&*riid, ppv as *mut _);
-    crate::log(&format!("picker: QueryInterface returned 0x{:08X}", hr.0));
+    crate::log::info("QueryInterface returned", &[("hresult", &format!("0x{:08X}", hr.0))]);
     Ok(hr)
 }

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+logline = { git = "https://forgejo.romaine.life/romaine-life/logline", tag = "v0.1.5" }
 windows = { version = "0.58", features = [
     "Win32_Foundation",
     "Win32_Security",
