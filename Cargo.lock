@@ -132,6 +132,7 @@ name = "fzt-picker-injector"
 version = "0.1.0"
 dependencies = [
  "fzt-picker-handoff",
+ "one-copy",
  "windows",
  "winresource",
 ]
@@ -277,6 +278,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
+name = "one-copy"
+version = "0.1.0"
+source = "git+https://forgejo.romaine.life/romaine-life/one-copy?tag=v0.1.0#65075f155fa7b9a19bd266f76994793b8761c6fd"
+dependencies = [
+ "libc",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "picker-test-trigger"
 version = "0.1.0"
 dependencies = [
@@ -345,7 +355,7 @@ dependencies = [
  "bitflags",
  "libc",
  "mach2",
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -639,6 +649,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d"
 dependencies = [
  "windows-targets",
+]
+
+[[package]]
+name = "windows-sys"
+version = "0.61.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
+dependencies = [
+ "windows-link",
 ]
 
 [[package]]

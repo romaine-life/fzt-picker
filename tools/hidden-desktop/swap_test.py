@@ -10,7 +10,9 @@ the injector, as a release does. With no dialog DLL beside the hook, each dialog
 fails at once, and the picker's log names the folder that copy of the hook looked in,
 so the report shows which release answered each dialog. After the swap it should
 be v2. With `overlap`, the new injector starts before the old one stops, so the
-app's shim never unloads and moves the detour to v2 in place.
+app's shim never unloads and moves the detour to v2 in place. Each injector takes a
+one-copy lock scope apart from his running one; in `overlap` the two get different
+scopes, or the new one would wait for the old to end, as a release's does.
 """
 import _winapi
 import json
@@ -35,8 +37,14 @@ for version in ("v1", "v2"):
         shutil.copy2(build / name, root / version / name)
 _winapi.CreateJunction(str(root / "v1"), str(current))
 
+
+def start_injector(scope):
+    return subprocess.Popen([str(current / "fzt-picker.exe")],
+                            env=dict(os.environ, ONE_COPY_SCOPE=f"swap-test-{os.getpid()}-{scope}"))
+
+
 start = log.stat().st_size if log.exists() else 0
-injector = subprocess.Popen([str(current / "fzt-picker.exe")])
+injector = start_injector("old")
 time.sleep(1.5)
 app = subprocess.Popen([str(trigger), "--repeat", "3", "--gap-ms", "5000"], stdout=subprocess.PIPE, text=True)
 time.sleep(2.5)
@@ -44,12 +52,12 @@ os.rmdir(current)
 _winapi.CreateJunction(str(root / "v2"), str(current))
 old = injector
 if overlap:
-    injector = subprocess.Popen([str(current / "fzt-picker.exe")])
+    injector = start_injector("new")
     time.sleep(1)
 old.kill()
 old.wait()
 if not overlap:
-    injector = subprocess.Popen([str(current / "fzt-picker.exe")])
+    injector = start_injector("old")
 try:
     app.communicate(timeout=30)
 finally:

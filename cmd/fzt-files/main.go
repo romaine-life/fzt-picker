@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 
 	"github.com/romaine-life/fzt-terminal/tui"
+	onecopy "github.com/romaine-life/one-copy"
 )
 
 const usage = `fzt-files: file management by chained command palettes.
@@ -111,6 +112,12 @@ func start(args []string) int {
 			fmt.Fprintf(os.Stderr, "fzt-files: %v\n", err)
 			return 1
 		}
+	}
+	if chosen == nil {
+		// One copy of the command list (FP-17): a second, started outside the at
+		// menu, prints "fzt-files is already open" and exits 1 before the terminal
+		// opens. A direct command is another app's one key and stays outside it.
+		onecopy.ClaimOrExit("fzt-files")
 	}
 	appLog().Info("start", "direct", chosen != nil)
 	setWindowTitle(title)

@@ -21,6 +21,22 @@ fn main() {
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
+    // One injector per sign-in (FP-17), claimed before anything is published: a refused
+    // copy of a newer release that published its hook first would leave the shims on a
+    // release whose injector isn't running. The claim retries for 5 s, which covers an
+    // old injector still exiting. A lock that can't be checked never keeps the injector
+    // from running.
+    let _one_copy = match one_copy::claim("fzt-picker") {
+        Ok(lock) => Some(lock),
+        Err(one_copy::Error::AlreadyOpen) => {
+            log::info("injector already running, so this one exits", &[]);
+            return Ok(());
+        }
+        Err(e) => {
+            log::warn("injector can't check for another copy, so it runs anyway", &[("error", &e)]);
+            None
+        }
+    };
     let paths = find_paths()?;
     // Published before the hook goes in, so a shim's first event finds it.
     let handoff = Handoff::create(&paths.shim)?;

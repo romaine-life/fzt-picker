@@ -33,13 +33,14 @@ CGO_ENABLED=0 GOMAXPROCS=4 go build -p 4 -o dist/fzt-files.exe ./cmd/fzt-files
 ### Real terminal check
 
 Run on a throwaway server, never the live `at` server. `FZT_FILES_DATA` keeps the run out
-of the real log, which is copied to the NAS. Use a test folder of your own, such as
-`/tmp/fp-qa` (Git Bash's temp folder).
+of the real log, which is copied to the NAS, and `ONE_COPY_SCOPE` gives the command list a
+lock of its own, or a manage files window he has open refuses it. Use a test folder of your
+own, such as `/tmp/fp-qa` (Git Bash's temp folder).
 
 ```sh
 tmux-throwaway start ffqa -- -s q -x 90 -y 26
 MSYS_NO_PATHCONV=1 tmux -L ffqa set -g remain-on-exit on
-MSYS_NO_PATHCONV=1 tmux -L ffqa respawn-pane -k -t q -e 'FZT_FILES_DATA=<test folder>\data' '<worktree>\dist\fzt-files.exe --start-dir <test folder>'
+MSYS_NO_PATHCONV=1 tmux -L ffqa respawn-pane -k -t q -e 'FZT_FILES_DATA=<test folder>\data' -e ONE_COPY_SCOPE=qa '<worktree>\dist\fzt-files.exe --start-dir <test folder>'
 MSYS_NO_PATHCONV=1 tmux -L ffqa capture-pane -p -t q
 MSYS_NO_PATHCONV=1 tmux -L ffqa send-keys -t q -l 'rename file'
 MSYS_NO_PATHCONV=1 tmux -L ffqa send-keys -t q Enter
@@ -58,6 +59,9 @@ Go through each command and check:
 - `fzt-files rename <path>` lands on the text box, prints the new path and exits 0; Escape
   exits 130.
 - `info` shows the repo, version, install path and checkout.
+- One copy: with the list open, a second `fzt-files` with the same `ONE_COPY_SCOPE` prints
+  `fzt-files is already open` and exits 1 after about 5 s, and `fzt-files rename <path>`
+  still opens.
 - The window can shrink to 34 by 10 without breaking.
 
 Finish with `tmux -L ffqa kill-server` and delete the test folder.
@@ -103,7 +107,8 @@ This tests the DLL alone. The hook decides whether it runs at all, so after a re
 
 `hook_test.py` starts an injector and `test-trigger.exe` on a hidden desktop. A global hook
 reaches only its own desktop, so this injector can't touch Nelson's apps or his running
-injector, and only the one it started is stopped. `test-trigger` opens the system file
+injector, and only the one it started is stopped. It runs under an `ONE_COPY_SCOPE` of its
+own, so his injector's one-copy lock doesn't refuse it. `test-trigger` opens the system file
 dialog, the hook swaps in fzt's, opened in the user folder, and the script goes up to the
 drive roots with Left, walks down by name and reports what came back.
 

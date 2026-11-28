@@ -73,7 +73,9 @@ root = pathlib.Path(folder)
 # the drive roots with Left, then walk down by name, as a person would.
 steps = [root.drive] + list(root.parts[1:])
 
-injector = subprocess.Popen([os.path.join(injector_dir, "fzt-picker.exe")])
+# A lock scope of its own, so his running injector's one-copy lock doesn't refuse this one.
+injector = subprocess.Popen([os.path.join(injector_dir, "fzt-picker.exe")],
+                            env=dict(os.environ, ONE_COPY_SCOPE=f"hook-test-{os.getpid()}"))
 children = [injector]
 
 
