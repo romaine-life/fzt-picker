@@ -40,8 +40,8 @@ github.com/romaine-life/fzt-terminal v0.1.210 h1:69ZjJ/owuteGEiFhxgCdvzVqSvH7RtQ
 github.com/romaine-life/fzt-terminal v0.1.210/go.mod h1:vMm5QDCbSUyuYQ5LviYCq7q/3gDcIH+A7DrXqcU4yV0=
 github.com/romaine-life/logline v0.1.5 h1:z1b1u03xHjU83gh3KqXjvHO3vw1bTWO39XJyUBYezf4=
 github.com/romaine-life/logline v0.1.5/go.mod h1:zJcP0wuqoC+eolAaPsbT7rD+Ia9tHkPLeAiFXuh6jbo=
-github.com/romaine-life/one-copy v0.1.1 h1:hvoKi2dY75/SS+h1LuImWuexgnOHipQtvVpr8g4Xd9E=
-github.com/romaine-life/one-copy v0.1.1/go.mod h1:Lr9lMl/d8wjDb3lvkVG33WF4bHCILRikrgws6YUqCBo=
+github.com/romaine-life/one-copy v0.1.2 h1:FyYjGRNF6bZ/xZ6AlGfEUNpmjdfg5scKs5JTZsaA9/0=
+github.com/romaine-life/one-copy v0.1.2/go.mod h1:Lr9lMl/d8wjDb3lvkVG33WF4bHCILRikrgws6YUqCBo=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.3.0 h1:NGXK3lHquSN08v5vWalVI/L8XU9hdzE/G6xsrze47As=
 github.com/stretchr/objx v0.3.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoHMkEqE=
