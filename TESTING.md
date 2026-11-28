@@ -60,7 +60,8 @@ Go through each command and check:
   exits 130.
 - `info` shows the repo, version, install path and checkout.
 - One copy: with the list open, a second `fzt-files` with the same `ONE_COPY_SCOPE` prints
-  `fzt-files is already open` and exits 1 after about 5 s, and `fzt-files rename <path>`
+  `fzt-files is already open` and exits 1 at once (one-copy v0.1.1 sees the open one
+  running; it waits up to 5 s only for a copy still ending), and `fzt-files rename <path>`
   still opens.
 - The window can shrink to 34 by 10 without breaking.
 

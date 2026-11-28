@@ -23,9 +23,9 @@ fn main() {
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     // One injector per sign-in (FP-17), claimed before anything is published: a refused
     // copy of a newer release that published its hook first would leave the shims on a
-    // release whose injector isn't running. The claim retries for 5 s, which covers an
-    // old injector still exiting. A lock that can't be checked never keeps the injector
-    // from running.
+    // release whose injector isn't running. The claim answers at once while another
+    // injector runs and retries for up to 5 s only for one still exiting. A lock that
+    // can't be checked never keeps the injector from running.
     let _one_copy = match one_copy::claim("fzt-picker") {
         Ok(lock) => Some(lock),
         Err(one_copy::Error::AlreadyOpen) => {
